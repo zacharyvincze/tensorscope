@@ -14,7 +14,7 @@ Three parts, joined only by the bundle format:
 |---|---|---|
 | `include/tensorscope/` | capture library | Header-only C++17. Writes bundles. CMake target `tensorscope::capture`. |
 | `viewer/` | HTML generator | Python CLI (run with `uv`). Turns a capture directory into one self-contained HTML file. |
-| `extension/` | VS Code extension | Planned. Opens capture directories directly in a webview. |
+| `extension/` | VS Code extension | TypeScript. Opens capture directories directly in a webview. |
 | `spec/format.md` | bundle format | The contract between writer and readers. |
 
 ### The format is the contract
@@ -33,7 +33,11 @@ Consumers fetch the library with `FetchContent` behind an opt-in build option, s
 
 ### Viewer
 
-The generated HTML is one file with gzipped data embedded, no server, and no network access, so it opens from VS Code Live Preview, a port-forwarded browser, or a downloaded copy. `viewer/.../html_viewer.html` is the page template; the extension is meant to reuse it as its webview content.
+The generated HTML is one file with gzipped data embedded, no server, and no network access, so it opens from VS Code Live Preview, a port-forwarded browser, or a downloaded copy. `viewer/src/tensorscope_viewer/html_viewer.html` is the page template for both readers; the extension's build copies it into `extension/media/`.
+
+### Extension
+
+`extension/src/bundle.ts` builds the same JSON payload as `html_export.py`, so the shared page sees identical data from either reader. A change to the payload changes both. The extension runs on the workspace side so it reads captures on a Remote-SSH host. Its build has to work on Node 18, which is why `@vscode/vsce` is pinned to 2.x and `cheerio` is overridden in `package.json`.
 
 ## Conventions
 

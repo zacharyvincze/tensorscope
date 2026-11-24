@@ -10,7 +10,7 @@ Status: early setup. Not ready for use yet.
 |---|---|
 | `include/tensorscope/` | Header-only C++17 capture library (CMake target `tensorscope::capture`) |
 | `viewer/` | Python CLI that turns a capture directory into one self-contained HTML viewer |
-| `extension/` | VS Code extension that opens capture directories (planned) |
+| `extension/` | VS Code extension that opens capture directories in a tab |
 | `spec/format.md` | Bundle format, the contract between writer and readers |
 
 ## Using the capture library
@@ -33,4 +33,4 @@ The library knows nothing about the code under test. A project provides an adapt
 
 An adapter builds a `Comparison::of<TRef, TAct>(kind, axes, shape)`, wraps it in a `Recording`, and copies each element with `put(storage, dense, ref, act)`. The comparator calls `recording.observer()` for every element it checks, then `recording.submit()`. The status mask is the comparator's verdict, never recomputed.
 
-Capture is off at runtime unless `TENSORSCOPE_CAPTURE_DIR` is set. `TENSORSCOPE_CAPTURE_ALL=1` also writes passing cases. See [`viewer/`](viewer/README.md) to view the result.
+Capture is off at runtime unless `TENSORSCOPE_CAPTURE_DIR` is set. `TENSORSCOPE_CAPTURE_ALL=1` also writes passing cases. View the result with the [VS Code extension](extension/README.md) or the [HTML viewer](viewer/README.md).
