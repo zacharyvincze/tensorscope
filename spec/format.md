@@ -11,7 +11,7 @@ One directory per test case: `<capture dir>/<Suite>/<Fixture>.<Test>/<Param>/`. 
 ```json
 {
   "format": "tensorscope", "version": 1,
-  "case": "Image_Color/ColorCastTest.Correctness/HOST_I8toI8_PKD3_FullRoi_2x36x55",
+  "case": "Filters/BlurTest.Correctness/U8_3ch_2x36x55",
   "passed": false,
   "failure": "<test failure text>",
   "comparisons": [
