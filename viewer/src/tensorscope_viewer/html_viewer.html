@@ -218,19 +218,49 @@ async function unpack(s) {
 }
 async function typed([t, s]) { const b = await unpack(s); return t === "f8" ? new Float64Array(b) : new Float32Array(b); }
 
+// Arrays come embedded (standalone HTML) or, in the extension, from the host on request: the
+// page then starts with only the case index, so opening a large capture costs nothing up front.
+const pending = new Map();
+let requestSeq = 0;
+function request(index) {
+  const id = ++requestSeq;
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    host.postMessage({ type: "load", id, index });
+  });
+}
+async function arrays(e, i) {
+  if (e.ref) return { ref: await typed(e.ref), act: await typed(e.act),
+                      diff: new Float32Array(await unpack(e.diff)), status: new Uint8Array(await unpack(e.status)) };
+  const a = await request(i), vals = ([t, b]) => t === "f8" ? new Float64Array(b) : new Float32Array(b);
+  e.shape = a.shape;
+  e.dtypes = a.dtypes;
+  return { ref: vals(a.ref), act: vals(a.act), diff: new Float32Array(a.diff), status: new Uint8Array(a.status) };
+}
+
+// Decoded comparisons, most recently used last. Bounded so a long session over a large capture
+// doesn't hold every case it has visited; entries are promises so a prefetch and a select share.
+const cache = new Map(), CACHE_SIZE = 24;
+function load(i) {
+  let p = cache.get(i);
+  if (p) cache.delete(i);
+  else p = decode(i);
+  cache.set(i, p);
+  p.catch(() => cache.get(i) === p && cache.delete(i));
+  while (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value);
+  return p;
+}
+
 // Decoded comparison + how its canonical (channels-last) arrays map onto 2-D panes.
-const cache = new Map();
-async function load(i) {
-  if (cache.has(i)) return cache.get(i);
-  const e = ENTRIES[i];
+async function decode(i) {
+  const e = ENTRIES[i], a = await arrays(e, i);
   const hasC = e.axes[e.axes.length - 1] === "c";
   const C = hasC ? e.shape[e.shape.length - 1] : 1;
   let dims = hasC ? e.shape.slice(0, -1) : e.shape.slice();
   let labels = hasC ? e.axes.slice(0, -1) : e.axes.slice();
   if (dims.length === 1) { dims = [1, ...dims]; labels = ["", ...labels]; }
   const v = { e, C, rgb: C === 3, dims, labels, H: dims[dims.length - 2], W: dims[dims.length - 1],
-              ref: await typed(e.ref), act: await typed(e.act),
-              diff: new Float32Array(await unpack(e.diff)), status: new Uint8Array(await unpack(e.status)) };
+              ref: a.ref, act: a.act, diff: a.diff, status: a.status };
   // 8-bit types display their full range; float types are stretched per slice in draw().
   v.lim = { uint8: [0, 255], int8: [-128, 127] }[e.dtypes[1]] || null;
   // Slider domain for manual levels: the type range, else everything in reference and actual.
@@ -242,7 +272,6 @@ async function load(i) {
   }
   v.peak = 0;
   for (const d of v.diff) if (Math.abs(d) > v.peak) v.peak = Math.abs(d);
-  cache.set(i, v);
   return v;
 }
 
@@ -437,9 +466,24 @@ function renderList() {
   }).join("") : `<div class="empty">${ENTRIES.length ? "no cases match" : "no comparisons in this capture"}</div>`;
 }
 
+// target is the latest pick, which may still be loading; keyboard steps go from it, not from the
+// case on screen, so pressing a key repeatedly moves that many cases.
+let selectSeq = 0, target = -1;
 async function select(i) {
   if (i === undefined || i < 0) return;
-  const v = await load(i), e = v.e;
+  // Arrowing faster than cases load: only the latest pick may take over the panes.
+  const seq = ++selectSeq;
+  target = i;
+  let v;
+  try { v = await load(i); }
+  catch (err) {
+    if (seq !== selectSeq) return;
+    target = current;
+    toast(`could not load ${ENTRIES[i].case}: ${err.message || err}`);
+    return;
+  }
+  if (seq !== selectSeq) return;
+  const e = v.e;
   const sameSize = view && view.W === v.W && view.H === v.H;
   if (i !== current) levels = null;
   current = i;
@@ -466,6 +510,9 @@ async function select(i) {
   // Same-sized cases keep zoom and scroll, so a pinned pixel can be compared across cases.
   if (!sameSize) fitZoom();
   draw();
+  // Warm the neighbours so stepping through the list rarely waits on a load.
+  const pos = visible.indexOf(i);
+  for (const j of [visible[pos + 1], visible[pos - 1]]) if (j !== undefined) load(j).catch(() => {});
 }
 
 function renderSliders() {
@@ -792,7 +839,7 @@ document.addEventListener("keydown", (ev) => {
   }
   if (t === $("filter") && ev.key === "Enter") { select(visible[0]); t.blur(); return; }
   if (typing || ev.ctrlKey || ev.metaKey || ev.altKey) return;
-  const pos = visible.indexOf(current);
+  const pos = visible.indexOf(target);
   switch (ev.key) {
     case "ArrowDown": select(visible[Math.min(pos + 1, visible.length - 1)]); break;
     case "ArrowUp": select(visible[Math.max(pos - 1, 0)]); break;
@@ -834,6 +881,11 @@ if (host) {
     if (m.type === "init" || m.type === "failOnly") { prefs.failOnly = m.failOnly; renderList(); }
     if (m.type === "init") select(m.index ?? visible[0]);
     if (m.type === "select") select(m.index);
+    if (m.type === "arrays") {
+      const p = pending.get(m.id);
+      pending.delete(m.id);
+      if (p) m.error ? p.reject(new Error(m.error)) : p.resolve(m);
+    }
   });
   host.postMessage({ type: "ready" });
 } else {

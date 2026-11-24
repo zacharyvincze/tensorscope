@@ -2,7 +2,7 @@
   "name": "tensorscope",
   "displayName": "tensorscope",
   "description": "Visual debugger for tensor comparison test captures",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "tensorscope",
   "license": "MIT",
   "repository": {
@@ -42,13 +42,13 @@
     "viewsWelcome": [
       {
         "view": "tensorscope.cases",
-        "contents": "No capture is open.\n[Open Capture…](command:tensorscope.open)\nYou can also right-click a capture directory or a manifest.json in the Explorer."
+        "contents": "No capture is open.\n[Open Capture\u2026](command:tensorscope.open)\nYou can also right-click a capture directory or a manifest.json in the Explorer."
       }
     ],
     "commands": [
       {
         "command": "tensorscope.open",
-        "title": "Open Capture…",
+        "title": "Open Capture\u2026",
         "category": "tensorscope",
         "icon": "$(folder-opened)"
       },

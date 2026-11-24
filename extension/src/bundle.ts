@@ -1,9 +1,9 @@
-// Reads capture bundles (spec/format.md) and builds the page payload. The payload must match what
-// viewer/src/tensorscope_viewer/html_export.py embeds, since both feed the same html_viewer.html.
+// Reads capture bundles (spec/format.md) for the page. Field names match the entries that
+// viewer/src/tensorscope_viewer/html_export.py embeds, since both feed the same html_viewer.html;
+// here the page gets entryMeta() up front and entryArrays() for a case only when it shows it.
 
 import * as fs from "fs/promises";
 import * as path from "path";
-import { gzipSync } from "zlib";
 
 export const FORMAT = "tensorscope";
 export const VERSION = 1;
@@ -52,20 +52,43 @@ export async function readCase(manifest: string): Promise<Case> {
     };
 }
 
-async function findManifests(dir: string, out: string[]): Promise<void> {
-    for (const ent of await fs.readdir(dir, { withFileTypes: true })) {
-        const p = path.join(dir, ent.name);
-        if (ent.isDirectory()) await findManifests(p, out);
-        else if (ent.isFile() && ent.name === "manifest.json") out.push(p);
+// Maps fn over items with at most `limit` calls in flight. Unbounded, a large capture opens enough
+// files at once to hit the descriptor limit; one at a time is slow on network filesystems.
+async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
+    const out = new Array<R>(items.length);
+    let next = 0;
+    const worker = async () => {
+        while (next < items.length) {
+            const i = next++;
+            out[i] = await fn(items[i]);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+    return out;
+}
+
+const IO_LIMIT = 32;
+
+// Breadth-first, one level's directories read in parallel.
+async function findManifests(root: string): Promise<string[]> {
+    const manifests: string[] = [];
+    for (let level = [root]; level.length;) {
+        const listed = await mapLimit(level, IO_LIMIT, async (dir) =>
+            (await fs.readdir(dir, { withFileTypes: true })).map((ent) => ({ dir, ent })));
+        level = [];
+        for (const { dir, ent } of listed.flat()) {
+            const p = path.join(dir, ent.name);
+            if (ent.isDirectory()) level.push(p);
+            else if (ent.isFile() && ent.name === "manifest.json") manifests.push(p);
+        }
     }
+    return manifests;
 }
 
 // Every bundle under root (or root itself if it is a manifest), sorted by case name.
 export async function findCases(root: string): Promise<Case[]> {
-    const manifests: string[] = [];
-    if ((await fs.stat(root)).isFile()) manifests.push(root);
-    else await findManifests(root, manifests);
-    const cases = await Promise.all(manifests.map(readCase));
+    const manifests = (await fs.stat(root)).isFile() ? [root] : await findManifests(root);
+    const cases = await mapLimit(manifests, IO_LIMIT, readCase);
     return cases.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
@@ -114,16 +137,12 @@ function elements(a: Npy): ArrayLike<number> {
     }
 }
 
-// gzip + base64; the page inflates it with DecompressionStream when the case is opened.
-function pack(bytes: ArrayBufferView): string {
-    const view = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    return gzipSync(view, { level: 6 }).toString("base64");
-}
-
-function values(a: Npy): [string, string] {
-    const f4 = EXACT_IN_F32.has(a.descr);
+// Element values as the page reads them: float32 where that is exact, float64 otherwise.
+function values(a: Npy): [string, ArrayBuffer] {
     const src = elements(a);
-    return [f4 ? "f4" : "f8", pack(f4 ? Float32Array.from(src) : Float64Array.from(src))];
+    if (EXACT_IN_F32.has(a.descr))
+        return ["f4", (src instanceof Float32Array ? src : Float32Array.from(src)).buffer as ArrayBuffer];
+    return ["f8", (src instanceof Float64Array ? src : Float64Array.from(src)).buffer as ArrayBuffer];
 }
 
 async function load(c: Case, file: string): Promise<Npy> {
@@ -131,33 +150,41 @@ async function load(c: Case, file: string): Promise<Npy> {
     return parseNpy(await fs.readFile(p), p);
 }
 
-async function payload(c: Case, index: number): Promise<object> {
-    const e = c.comparisons[index];
-    const [ref, act, diff, status] = await Promise.all(
-        (["reference", "actual", "diff", "status"] as const).map((r) => load(c, e.arrays[r])));
+// What the page needs to list a comparison; read from the manifest alone.
+export function entryMeta(c: Case, k: number): object {
+    const e = c.comparisons[k];
     return {
         case: c.name,
-        index,
+        index: k,
         count: c.comparisons.length,
         passed: c.passed,
         failure: c.failure,
         kind: e.kind,
         axes: e.axes,
-        shape: ref.shape,
-        dtypes: [DTYPE_NAMES[ref.descr] ?? ref.descr, DTYPE_NAMES[act.descr] ?? act.descr],
         compared: e.compared,
         failed: e.failed,
-        ref: values(ref),
-        act: values(act),
-        diff: pack(Float32Array.from(elements(diff))),
-        status: pack(Uint8Array.from(elements(status))),
     };
 }
 
-// The JSON the page reads from its data script, with "</" escaped so it can't close the tag.
-export async function pageData(cases: Case[]): Promise<string> {
-    const entries: object[] = [];
-    for (const c of cases)
-        for (let k = 0; k < c.comparisons.length; ++k) entries.push(await payload(c, k));
+// The rest of the entry, sent when the page opens the comparison. ArrayBuffers cross postMessage as
+// binary, so nothing is base64-encoded or compressed on this path.
+export async function entryArrays(c: Case, k: number) {
+    const e = c.comparisons[k];
+    const [ref, act, diff, status] = await Promise.all(
+        (["reference", "actual", "diff", "status"] as const).map((r) => load(c, e.arrays[r])));
+    const f32 = elements(diff), u8 = elements(status);
+    return {
+        shape: ref.shape,
+        dtypes: [DTYPE_NAMES[ref.descr] ?? ref.descr, DTYPE_NAMES[act.descr] ?? act.descr],
+        ref: values(ref),
+        act: values(act),
+        diff: (f32 instanceof Float32Array ? f32 : Float32Array.from(f32)).buffer as ArrayBuffer,
+        status: (u8 instanceof Uint8Array ? u8 : Uint8Array.from(u8)).buffer as ArrayBuffer,
+    };
+}
+
+// The page's initial data, with "</" escaped so it can't close the script tag it sits in.
+export function pageIndex(cases: Case[]): string {
+    const entries = cases.flatMap((c) => c.comparisons.map((_, k) => entryMeta(c, k)));
     return JSON.stringify(entries).replace(/<\//g, "<\\/");
 }

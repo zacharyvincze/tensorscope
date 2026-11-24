@@ -3,7 +3,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as vscode from "vscode";
 
-import { Case, findCases, pageData } from "./bundle";
+import { Case, entryArrays, findCases, pageIndex } from "./bundle";
 import { Capture, CasesView, Entry, Node } from "./cases";
 
 // One panel per capture path, so reopening the same capture reveals it instead of duplicating it.
@@ -85,6 +85,14 @@ async function open(context: vscode.ExtensionContext, root: string): Promise<voi
             panel.webview.postMessage({ type: "init", failOnly: cases.failOnly, index });
         } else if (m.type === "selected") {
             cases.followPanel(capture, m.index);
+        } else if (m.type === "load") {
+            // Index the entry at request time: a reload in between renumbers, but also replaces the
+            // page, so a stale request has no one left to answer.
+            const e = capture.entries[m.index];
+            const reply = e ? entryArrays(e.case, e.comparison) : Promise.reject(new Error("no such case"));
+            reply.then(
+                (data) => panel.webview.postMessage({ type: "arrays", id: m.id, ...data }),
+                (err) => panel.webview.postMessage({ type: "arrays", id: m.id, error: String(err.message ?? err) }));
         } else if (m.type === "focusCases") {
             vscode.commands.executeCommand("tensorscope.cases.focus");
         }
@@ -125,7 +133,7 @@ async function html(webview: vscode.Webview, template: string, root: string, fou
     const nonce = randomBytes(16).toString("base64");
     const csp = `default-src 'none'; img-src ${webview.cspSource} blob: data:; ` +
                 `style-src 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-    const data = await pageData(found);
+    const data = pageIndex(found);
     return page
         .replace("<head>", `<head>\n<meta http-equiv="Content-Security-Policy" content="${csp}">`)
         .replace(/<script>/g, `<script nonce="${nonce}">`)
