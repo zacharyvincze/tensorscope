@@ -126,6 +126,10 @@
   #keys td:first-child { text-align:right; white-space:nowrap; }
   #toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:30; max-width:80vw; padding:6px 12px; background:var(--widget-bg); border:1px solid var(--widget-border); border-radius:var(--radius-sm); box-shadow:0 4px 12px var(--shadow); opacity:0; transition:opacity .2s; pointer-events:none; word-break:break-all; }
   #toast.show { opacity:1; }
+
+  /* In the VS Code extension the case list is a native sidebar view, so the page drops its own. */
+  body.hosted #side, body.hosted .gutter[data-resize="side"], body.hosted .standalone-only { display:none; }
+  body:not(.hosted) .hosted-only { display:none; }
 </style>
 </head>
 <body>
@@ -177,7 +181,8 @@
     <tr><td><kbd>+</kbd> <kbd>−</kbd></td><td>zoom in / out (wheel zooms about the cursor)</td></tr>
     <tr><td><kbd>a</kbd></td><td>reset display min/max to auto</td></tr>
     <tr><td><kbd>c</kbd></td><td>copy <code>--gtest_filter</code> for this case</td></tr>
-    <tr><td><kbd>/</kbd></td><td>focus the case filter (<kbd>Enter</kbd> opens the first match)</td></tr>
+    <tr class="standalone-only"><td><kbd>/</kbd></td><td>focus the case filter (<kbd>Enter</kbd> opens the first match)</td></tr>
+    <tr class="hosted-only"><td><kbd>/</kbd></td><td>focus the Cases view (type there to filter)</td></tr>
     <tr><td><kbd>Esc</kbd></td><td>close this · restore a maximized pane · unpin pixel</td></tr>
     <tr><td>click</td><td>pin / unpin the pixel under the cursor</td></tr>
     <tr><td>drag image</td><td>pan (all panes linked)</td></tr>
@@ -190,6 +195,9 @@
 <script>
 "use strict";
 const ENTRIES = JSON.parse(document.getElementById("data").textContent);
+// Set when running inside the VS Code extension, which owns case selection; null when standalone.
+const host = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : null;
+if (host) document.body.classList.add("hosted");
 const $ = (id) => document.getElementById(id);
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const INFERNO = [[0,0,4],[31,12,72],[85,15,109],[136,34,106],[186,54,85],[227,89,51],[249,140,10],[249,201,50],[252,255,164]];
@@ -436,6 +444,7 @@ async function select(i) {
   if (i !== current) levels = null;
   current = i;
   view = v;
+  host?.postMessage({ type: "selected", index: i });
   document.querySelectorAll("#list div").forEach(d => d.classList.toggle("sel", +d.dataset.i === i));
   document.querySelector(`#list div[data-i="${i}"]`)?.scrollIntoView({ block: "nearest" });
   $("title").textContent = e.case + (e.count > 1 ? ` [${e.index}]` : "");
@@ -796,7 +805,10 @@ document.addEventListener("keydown", (ev) => {
     case "-": case "_": zoomCenter(zoomStep(zoom, -1)); break;
     case "c": $("copy").click(); break;
     case "a": $("lv-auto").click(); break;
-    case "/": $("filter").focus(); $("filter").select(); break;
+    case "/":
+      if (host) host.postMessage({ type: "focusCases" });
+      else { $("filter").focus(); $("filter").select(); }
+      break;
     case "?": $("keys").hidden = !$("keys").hidden; break;
     default: return;
   }
@@ -813,7 +825,20 @@ layoutGrid();
 applyZoom();
 renderList();
 if (!ENTRIES.length) $("title").textContent = "No comparisons in this capture.";
-select(visible[0]);
+
+// The extension answers "ready" with its failing-only setting and the case to show, so a reload
+// keeps the selection; afterwards it sends a message for each pick in its Cases view.
+if (host) {
+  window.addEventListener("message", (ev) => {
+    const m = ev.data;
+    if (m.type === "init" || m.type === "failOnly") { prefs.failOnly = m.failOnly; renderList(); }
+    if (m.type === "init") select(m.index ?? visible[0]);
+    if (m.type === "select") select(m.index);
+  });
+  host.postMessage({ type: "ready" });
+} else {
+  select(visible[0]);
+}
 </script>
 </body>
 </html>

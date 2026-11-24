@@ -3,13 +3,32 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as vscode from "vscode";
 
-import { findCases, pageData } from "./bundle";
+import { Case, findCases, pageData } from "./bundle";
+import { Capture, CasesView, Entry, Node } from "./cases";
 
 // One panel per capture path, so reopening the same capture reveals it instead of duplicating it.
-const panels = new Map<string, vscode.WebviewPanel>();
+const captures = new Map<string, Capture>();
+let cases: CasesView;
+
+const FAIL_ONLY = "tensorscope.failOnly";
 
 export function activate(context: vscode.ExtensionContext): void {
+    cases = new CasesView(context.globalState.get(FAIL_ONLY, false));
+
+    const setFailOnly = (value: boolean) => {
+        cases.failOnly = value;
+        context.globalState.update(FAIL_ONLY, value);
+        for (const c of captures.values()) c.panel.webview.postMessage({ type: "failOnly", failOnly: value });
+    };
+    // Context-menu commands get the clicked node; from the palette they act on the shown case.
+    const entryOf = (node?: Node): Entry | undefined => {
+        if (node?.kind === "entry") return node;
+        const c = cases.active;
+        return c?.entries[c.current];
+    };
+
     context.subscriptions.push(
+        cases,
         vscode.commands.registerCommand("tensorscope.open", async (uri?: vscode.Uri) => {
             uri ??= (await vscode.window.showOpenDialog({
                 canSelectFolders: true,
@@ -18,30 +37,59 @@ export function activate(context: vscode.ExtensionContext): void {
                 title: "Capture directory (TENSORSCOPE_CAPTURE_DIR of a run, or any directory below it)",
             }))?.[0];
             if (uri) await open(context, uri.fsPath);
+        }),
+        vscode.commands.registerCommand("tensorscope.failingOnly", () => setFailOnly(true)),
+        vscode.commands.registerCommand("tensorscope.allCases", () => setFailOnly(false)),
+        vscode.commands.registerCommand("tensorscope.reload", () => cases.active?.reload()),
+        vscode.commands.registerCommand("tensorscope.copyFilter", async (node?: Node) => {
+            const e = entryOf(node);
+            if (!e) return;
+            await vscode.env.clipboard.writeText(`--gtest_filter='${e.case.name}'`);
+            vscode.window.setStatusBarMessage(`Copied --gtest_filter for ${e.case.name}`, 3000);
+        }),
+        vscode.commands.registerCommand("tensorscope.openManifest", (node?: Node) => {
+            const e = entryOf(node);
+            if (e) vscode.window.showTextDocument(vscode.Uri.file(path.join(e.case.dir, "manifest.json")));
         }));
 }
 
 async function open(context: vscode.ExtensionContext, root: string): Promise<void> {
-    const existing = panels.get(root);
-    if (existing) return existing.reveal();
+    const existing = captures.get(root);
+    if (existing) return existing.panel.reveal();
 
     const isFile = (await fs.stat(root)).isFile();
     const label = path.basename(isFile ? path.dirname(root) : root);
     const panel = vscode.window.createWebviewPanel(
         "tensorscope", `tensorscope: ${label}`, vscode.ViewColumn.Active,
         { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] });
-    panels.set(root, panel);
+    const capture = new Capture(root, label, panel);
+    captures.set(root, capture);
 
     const template = path.join(context.extensionPath, "media", "html_viewer.html");
-    const render = () => vscode.window.withProgress(
+    capture.reload = () => vscode.window.withProgress(
         { location: vscode.ProgressLocation.Window, title: `tensorscope: loading ${label}` },
         async () => {
             try {
-                panel.webview.html = await html(panel.webview, template, root);
+                const found = await findCases(root);
+                capture.update(found);
+                panel.webview.html = await html(panel.webview, template, root, found);
+                if (cases.active === capture) cases.show(capture);
             } catch (err) {
                 vscode.window.showErrorMessage(`tensorscope: ${(err as Error).message}`);
             }
         });
+
+    panel.webview.onDidReceiveMessage((m) => {
+        if (m.type === "ready") {
+            const index = capture.current >= 0 ? capture.current : undefined;
+            panel.webview.postMessage({ type: "init", failOnly: cases.failOnly, index });
+        } else if (m.type === "selected") {
+            cases.followPanel(capture, m.index);
+        } else if (m.type === "focusCases") {
+            vscode.commands.executeCommand("tensorscope.cases.focus");
+        }
+    });
+    panel.onDidChangeViewState((ev) => ev.webviewPanel.active && cases.show(capture));
 
     // Rerunning the tests rewrites the bundles; reload once the writes settle.
     const base = vscode.Uri.file(isFile ? path.dirname(root) : root);
@@ -50,7 +98,7 @@ async function open(context: vscode.ExtensionContext, root: string): Promise<voi
     let timer: NodeJS.Timeout | undefined;
     const changed = () => {
         clearTimeout(timer);
-        timer = setTimeout(render, 750);
+        timer = setTimeout(capture.reload, 750);
     };
     watcher.onDidCreate(changed);
     watcher.onDidChange(changed);
@@ -59,21 +107,25 @@ async function open(context: vscode.ExtensionContext, root: string): Promise<voi
     panel.onDidDispose(() => {
         clearTimeout(timer);
         watcher.dispose();
-        panels.delete(root);
+        captures.delete(root);
+        if (cases.active === capture) cases.show([...captures.values()].pop());
     });
-    await render();
+
+    cases.show(capture);
+    await capture.reload();
+    // Bring up the case list for a newly opened capture; arrow keys then step through cases.
+    vscode.commands.executeCommand("tensorscope.cases.focus");
 }
 
-async function html(webview: vscode.Webview, template: string, root: string): Promise<string> {
-    const cases = await findCases(root);
+async function html(webview: vscode.Webview, template: string, root: string, found: Case[]): Promise<string> {
+    if (!found.length) return message(`No capture bundles under ${root}.`);
     const page = await fs.readFile(template, "utf8");
-    if (!cases.length) return message(`No capture bundles under ${root}.`);
 
     // Webviews should carry a CSP: only this page's own scripts run, and nothing loads remotely.
     const nonce = randomBytes(16).toString("base64");
     const csp = `default-src 'none'; img-src ${webview.cspSource} blob: data:; ` +
                 `style-src 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-    const data = await pageData(cases);
+    const data = await pageData(found);
     return page
         .replace("<head>", `<head>\n<meta http-equiv="Content-Security-Policy" content="${csp}">`)
         .replace(/<script>/g, `<script nonce="${nonce}">`)
@@ -82,7 +134,7 @@ async function html(webview: vscode.Webview, template: string, root: string): Pr
 
 function message(text: string): string {
     const escaped = text.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!);
-    return `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2em">${escaped}` +
+    return `<!DOCTYPE html><html><body style="font-family:var(--vscode-font-family);padding:2em">${escaped}` +
            `<p>Run the tests with TENSORSCOPE_CAPTURE_DIR set; the view reloads when bundles appear.</p>` +
            `</body></html>`;
 }

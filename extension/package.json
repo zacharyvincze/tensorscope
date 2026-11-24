@@ -21,11 +21,66 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tensorscope",
+          "title": "tensorscope",
+          "icon": "resources/tensorscope.svg"
+        }
+      ]
+    },
+    "views": {
+      "tensorscope": [
+        {
+          "id": "tensorscope.cases",
+          "name": "Cases",
+          "contextualTitle": "tensorscope"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "tensorscope.cases",
+        "contents": "No capture is open.\n[Open Capture…](command:tensorscope.open)\nYou can also right-click a capture directory or a manifest.json in the Explorer."
+      }
+    ],
     "commands": [
       {
         "command": "tensorscope.open",
         "title": "Open Capture…",
-        "category": "tensorscope"
+        "category": "tensorscope",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "tensorscope.failingOnly",
+        "title": "Show Failing Cases Only",
+        "category": "tensorscope",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "tensorscope.allCases",
+        "title": "Show All Cases",
+        "category": "tensorscope",
+        "icon": "$(filter-filled)"
+      },
+      {
+        "command": "tensorscope.reload",
+        "title": "Reload Capture",
+        "category": "tensorscope",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "tensorscope.copyFilter",
+        "title": "Copy GTest Filter",
+        "category": "tensorscope",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "tensorscope.openManifest",
+        "title": "Open Manifest",
+        "category": "tensorscope",
+        "icon": "$(go-to-file)"
       }
     ],
     "menus": {
@@ -34,6 +89,67 @@
           "command": "tensorscope.open",
           "when": "explorerResourceIsFolder || resourceFilename == manifest.json",
           "group": "navigation@90"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "tensorscope.failingOnly",
+          "when": "view == tensorscope.cases && !tensorscope.failOnly",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tensorscope.allCases",
+          "when": "view == tensorscope.cases && tensorscope.failOnly",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tensorscope.reload",
+          "when": "view == tensorscope.cases && tensorscope.hasCapture",
+          "group": "navigation@2"
+        },
+        {
+          "command": "tensorscope.open",
+          "when": "view == tensorscope.cases",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "tensorscope.copyFilter",
+          "when": "view == tensorscope.cases && viewItem == entry",
+          "group": "inline"
+        },
+        {
+          "command": "tensorscope.copyFilter",
+          "when": "view == tensorscope.cases && viewItem == entry",
+          "group": "1_copy"
+        },
+        {
+          "command": "tensorscope.openManifest",
+          "when": "view == tensorscope.cases && viewItem == entry",
+          "group": "2_open"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "tensorscope.failingOnly",
+          "when": "!tensorscope.failOnly"
+        },
+        {
+          "command": "tensorscope.allCases",
+          "when": "tensorscope.failOnly"
+        },
+        {
+          "command": "tensorscope.reload",
+          "when": "tensorscope.hasCapture"
+        },
+        {
+          "command": "tensorscope.copyFilter",
+          "when": "tensorscope.hasCapture"
+        },
+        {
+          "command": "tensorscope.openManifest",
+          "when": "tensorscope.hasCapture"
         }
       ]
     }

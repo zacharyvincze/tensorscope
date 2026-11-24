@@ -37,7 +37,7 @@ The generated HTML is one file with gzipped data embedded, no server, and no net
 
 ### Extension
 
-`extension/src/bundle.ts` builds the same JSON payload as `html_export.py`, so the shared page sees identical data from either reader. A change to the payload changes both. The extension runs on the workspace side so it reads captures on a Remote-SSH host. Its build has to work on Node 18, which is why `@vscode/vsce` is pinned to 2.x and `cheerio` is overridden in `package.json`.
+`extension/src/bundle.ts` builds the same JSON payload as `html_export.py`, so the shared page sees identical data from either reader. A change to the payload changes both. Inside the extension the page runs in hosted mode (it detects `acquireVsCodeApi`): its case list is replaced by the native Cases view (`extension/src/cases.ts`), and the two talk over `postMessage`. Opened standalone, the page must keep working with no host. The extension runs on the workspace side so it reads captures on a Remote-SSH host. Its build has to work on Node 18, which is why `@vscode/vsce` is pinned to 2.x and `cheerio` is overridden in `package.json`.
 
 ## Conventions
 
