@@ -4,32 +4,64 @@
 <meta charset="utf-8">
 <title>tensorscope</title>
 <style>
-  :root { color-scheme:dark; --bg:#0d1117; --panel:#161b22; --border:#30363d; --fg:#c9d1d9; --dim:#8b949e; --accent:#58a6ff; --fail:#f85149; --pass:#3fb950; --pin:#ffd33d; }
-  * { box-sizing: border-box; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+  /* In a VS Code webview the --vscode-* theme variables are defined and the page follows the editor
+     theme; opened standalone, every variable falls back to the built-in dark palette. */
+  :root {
+    color-scheme:dark;
+    --bg:var(--vscode-editor-background, #0d1117); --panel:var(--vscode-sideBar-background, #161b22);
+    --border:var(--vscode-panel-border, #30363d); --fg:var(--vscode-foreground, #c9d1d9);
+    --dim:var(--vscode-descriptionForeground, #8b949e); --accent:var(--vscode-focusBorder, #58a6ff);
+    --fail:var(--vscode-testing-iconFailed, #f85149); --pass:var(--vscode-testing-iconPassed, #3fb950);
+    --pin:var(--vscode-charts-yellow, #ffd33d); --canvas:var(--vscode-editor-background, #010409);
+    --skip:var(--vscode-testing-iconSkipped, #30363d);
+    --hover:var(--vscode-list-hoverBackground, #1f2630);
+    --sel-bg:var(--vscode-list-activeSelectionBackground, #1f6feb44); --sel-fg:var(--vscode-list-activeSelectionForeground, inherit);
+    --sash:var(--vscode-sash-hoverBorder, #1f6feb66);
+    --input-bg:var(--vscode-input-background, var(--bg)); --input-fg:var(--vscode-input-foreground, var(--fg));
+    --input-border:var(--vscode-input-border, var(--border));
+    --btn-bg:var(--vscode-button-secondaryBackground, var(--bg)); --btn-fg:var(--vscode-button-secondaryForeground, var(--fg));
+    --btn-hover:var(--vscode-button-secondaryHoverBackground, var(--bg)); --btn-border:var(--vscode-button-border, var(--border));
+    --dd-bg:var(--vscode-dropdown-background, var(--bg)); --dd-fg:var(--vscode-dropdown-foreground, var(--fg));
+    --dd-border:var(--vscode-dropdown-border, var(--border));
+    --widget-bg:var(--vscode-editorWidget-background, var(--panel)); --widget-border:var(--vscode-editorWidget-border, var(--border));
+    --shadow:var(--vscode-widget-shadow, #000a);
+    --scroll:var(--vscode-scrollbarSlider-background, var(--border)); --scroll-hover:var(--vscode-scrollbarSlider-hoverBackground, #484f58);
+    --kbd-bg:var(--vscode-keybindingLabel-background, var(--bg)); --kbd-fg:var(--vscode-keybindingLabel-foreground, var(--fg));
+    --kbd-border:var(--vscode-keybindingLabel-border, var(--border)); --kbd-bottom:var(--vscode-keybindingLabel-bottomBorder, var(--border));
+    --font:var(--vscode-font-family, ui-sans-serif, system-ui, sans-serif); --font-size:var(--vscode-font-size, 13px);
+    --mono:var(--vscode-editor-font-family, ui-monospace, monospace);
+    --radius:6px; --radius-sm:4px; --filter-pad:6px 8px; --filter-radius:6px; --range-border:var(--border);
+  }
+  body.vscode-light { color-scheme:light; }
+  /* VS Code's own controls are flat and square-cornered. */
+  body[data-vscode-theme-kind] { --radius:0; --radius-sm:2px; --filter-pad:4px 6px; --filter-radius:2px; --range-border:transparent; }
+  * { box-sizing: border-box; scrollbar-width:thin; scrollbar-color:var(--scroll) transparent; }
   ::-webkit-scrollbar { width:10px; height:10px; }
   ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:var(--border); border:2px solid transparent; border-radius:6px; background-clip:padding-box; }
-  ::-webkit-scrollbar-thumb:hover { background-color:#484f58; }
-  body { margin:0; height:100vh; display:flex; background:var(--bg); color:var(--fg); font:13px/1.4 ui-sans-serif,system-ui,sans-serif; overflow:hidden; }
+  ::-webkit-scrollbar-thumb { background:var(--scroll); border:2px solid transparent; border-radius:6px; background-clip:padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background-color:var(--scroll-hover); }
+  body { margin:0; padding:0; height:100vh; display:flex; background:var(--bg); color:var(--fg); font:var(--font-size)/1.4 var(--font); overflow:hidden; }
   body.resizing, body.resizing * { user-select:none; cursor:inherit !important; }
-  button { background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:4px; padding:1px 8px; font:inherit; cursor:pointer; }
-  button:hover { border-color:var(--accent); }
+  button { background:var(--btn-bg); color:var(--btn-fg); border:1px solid var(--btn-border); border-radius:var(--radius-sm); padding:1px 8px; font:inherit; cursor:pointer; }
+  button:hover { background:var(--btn-hover); border-color:var(--accent); }
   select, input { font:inherit; }
-  kbd { display:inline-block; min-width:18px; padding:0 4px; border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; background:var(--bg); font:11px ui-monospace,monospace; text-align:center; }
+  select { background:var(--dd-bg); color:var(--dd-fg); border:1px solid var(--dd-border); border-radius:var(--radius-sm); }
+  :focus-visible { outline:1px solid var(--accent); outline-offset:-1px; }
+  kbd { display:inline-block; min-width:18px; padding:0 4px; border:1px solid var(--kbd-border); border-bottom:2px solid var(--kbd-bottom); border-radius:var(--radius-sm); background:var(--kbd-bg); color:var(--kbd-fg); font:11px var(--mono); text-align:center; }
 
   .gutter { flex:0 0 5px; cursor:col-resize; background:linear-gradient(var(--border),var(--border)) center/1px 100% no-repeat; }
-  .gutter:hover, .ggut:hover { background-color:#1f6feb66; }
+  .gutter:hover, .ggut:hover { background-color:var(--sash); }
 
   #side { width:420px; display:flex; flex-direction:column; background:var(--panel); min-width:0; }
   #side-top { display:flex; align-items:center; gap:8px; padding:8px; }
-  #filter { flex:1; min-width:0; padding:6px 8px; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:6px; }
+  #filter { flex:1; min-width:0; padding:var(--filter-pad); background:var(--input-bg); color:var(--input-fg); border:1px solid var(--input-border); border-radius:var(--filter-radius); }
   #filter:focus { outline:none; border-color:var(--accent); }
   .chk { display:flex; align-items:center; gap:4px; white-space:nowrap; font-size:12px; color:var(--dim); cursor:pointer; }
   #counts { padding:0 10px 6px; color:var(--dim); font-size:12px; }
-  #list { flex:1; overflow:auto; font:12px ui-monospace,monospace; }
+  #list { flex:1; overflow:auto; font:12px var(--mono); }
   #list div { padding:3px 10px; white-space:nowrap; cursor:pointer; }
-  #list div:hover { background:#1f2630; }
-  #list div.sel { background:#1f6feb44; box-shadow:inset 2px 0 var(--accent); }
+  #list div:hover { background:var(--hover); }
+  #list div.sel { background:var(--sel-bg); color:var(--sel-fg); box-shadow:inset 2px 0 var(--accent); }
   #list .n { display:inline-block; width:92px; text-align:right; margin-right:8px; color:var(--fail); }
   #list .n.ok { color:var(--pass); }
   #list .fx { color:var(--dim); }
@@ -42,22 +74,23 @@
   #meta { color:var(--dim); font-size:12px; }
   #controls { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; padding:6px 12px; border-bottom:1px solid var(--border); font-size:12px; }
   #controls label { display:flex; gap:6px; align-items:center; }
-  #controls select, #controls input[type=range] { accent-color:var(--accent); background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:4px; }
+  #controls input[type=range] { accent-color:var(--accent); background:var(--dd-bg); border:1px solid var(--range-border); border-radius:var(--radius-sm); }
+  input[type=checkbox] { accent-color:var(--accent); }
   #controls .sep { width:1px; align-self:stretch; background:var(--border); }
   #levels { display:flex; gap:8px; align-items:center; }
   #levels input[type=range] { width:90px; }
-  #levels input[type=number] { width:78px; padding:0 4px; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:4px; }
+  #levels input[type=number] { width:78px; padding:0 4px; background:var(--input-bg); color:var(--input-fg); border:1px solid var(--input-border); border-radius:var(--radius-sm); }
   #lv-auto.on { color:var(--accent); border-color:var(--accent); }
   #pane-toggles { display:flex; gap:4px; align-items:center; }
   #pane-toggles button:not(.on) { color:var(--dim); text-decoration:line-through; }
-  #pane-toggles button.on { border-color:#1f6feb99; }
+  #pane-toggles button.on { border-color:var(--vscode-focusBorder, #1f6feb99); }
 
   #body { flex:1; display:flex; min-height:0; }
   #grid { flex:1; position:relative; display:grid; gap:6px; padding:6px; min-width:0; min-height:0; }
   .ggut { position:absolute; z-index:5; border-radius:3px; }
   .ggut.col { top:6px; bottom:6px; width:6px; cursor:col-resize; }
   .ggut.row { left:6px; right:6px; height:6px; cursor:row-resize; }
-  .pane { display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; background:#010409; border:1px solid var(--border); border-radius:6px; }
+  .pane { display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; background:var(--canvas); border:1px solid var(--border); border-radius:var(--radius); }
   .pane.drop { outline:2px dashed var(--accent); outline-offset:-2px; }
   .pane.moving { opacity:.4; }
   .phead { display:flex; align-items:center; gap:8px; padding:3px 4px 3px 8px; background:var(--panel); border-bottom:1px solid var(--border); font-size:11px; color:var(--dim); white-space:nowrap; overflow:hidden; cursor:grab; user-select:none; }
@@ -66,16 +99,16 @@
   .phead .pextra { flex:1; display:flex; align-items:center; gap:6px; overflow:hidden; }
   .pbtn { border:0; background:none; color:var(--dim); padding:0 5px; font-size:13px; line-height:1; }
   .pbtn:hover { color:var(--fg); }
-  .cbar { display:inline-block; width:72px; height:8px; border-radius:2px; }
-  .sw { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:-2px; }
+  .cbar { display:inline-block; flex:none; width:72px; height:8px; border-radius:2px; }
+  .sw { display:inline-block; flex:none; width:9px; height:9px; border-radius:2px; margin-right:-2px; }
   .view { flex:1; position:relative; overflow:auto; min-height:0; }
   .view canvas { display:block; image-rendering:pixelated; cursor:crosshair; }
   .view.dragging, .view.dragging canvas { cursor:grabbing; }
   .mark { position:absolute; display:none; pointer-events:none; z-index:2; border:1px solid #fff; box-shadow:0 0 0 1px #000, inset 0 0 0 1px #000; }
   .mark.pinned { border:2px solid var(--pin); }
 
-  #info { width:320px; overflow:auto; padding:10px 12px; font:12px ui-monospace,monospace; min-width:0; }
-  #info h4 { margin:0 0 6px; font:600 11px ui-sans-serif,system-ui,sans-serif; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; }
+  #info { width:320px; overflow:auto; padding:10px 12px; font:12px var(--mono); min-width:0; }
+  #info h4 { margin:0 0 6px; font:600 11px var(--font); color:var(--dim); text-transform:uppercase; letter-spacing:.06em; }
   #pixel { margin-bottom:16px; }
   #info table { border-collapse:collapse; margin-top:6px; }
   #info td, #info th { padding:1px 8px 1px 0; text-align:right; }
@@ -87,11 +120,11 @@
 
   #keys { position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; background:#0009; }
   #keys[hidden] { display:none; }
-  #keys > div { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px 18px; box-shadow:0 8px 24px #000a; }
+  #keys > div { background:var(--widget-bg); border:1px solid var(--widget-border); border-radius:var(--radius-sm); padding:14px 18px; box-shadow:0 8px 24px var(--shadow); }
   #keys h3 { margin:0 0 8px; font-size:14px; }
   #keys td { padding:3px 14px 3px 0; vertical-align:top; }
   #keys td:first-child { text-align:right; white-space:nowrap; }
-  #toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:30; max-width:80vw; padding:6px 12px; background:var(--panel); border:1px solid var(--border); border-radius:6px; box-shadow:0 4px 12px #0008; opacity:0; transition:opacity .2s; pointer-events:none; word-break:break-all; }
+  #toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:30; max-width:80vw; padding:6px 12px; background:var(--widget-bg); border:1px solid var(--widget-border); border-radius:var(--radius-sm); box-shadow:0 4px 12px var(--shadow); opacity:0; transition:opacity .2s; pointer-events:none; word-break:break-all; }
   #toast.show { opacity:1; }
 </style>
 </head>
@@ -160,8 +193,8 @@ const ENTRIES = JSON.parse(document.getElementById("data").textContent);
 const $ = (id) => document.getElementById(id);
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const INFERNO = [[0,0,4],[31,12,72],[85,15,109],[136,34,106],[186,54,85],[227,89,51],[249,140,10],[249,201,50],[252,255,164]];
-const STATUS_RGB = [[48,54,61],[46,160,67],[248,81,73]];
-const BG_RGB = [1, 4, 9];  // matches the pane background
+const STATUS_RGB = [[48,54,61],[46,160,67],[248,81,73]];  // [0] follows the theme, see readTheme()
+let BG_RGB = [1, 4, 9];  // the pane background; follows the VS Code theme, see readTheme()
 const STATUS_NAME = ["not compared", "pass", "FAIL"];
 const STATUS_CLS = ["skip", "pass", "FAIL"];
 const PANES = { ref: "reference", act: "actual", diff: "|actual − reference|", status: "status" };
@@ -222,7 +255,7 @@ let zoom = 8, maximized = null, levels = null;  // levels: manual [lo, hi], or n
 const grid = $("grid");
 for (const k of KEYS) {
   const extra = k === "diff" ? `<span class="cbar"></span><span id="diff-peak"></span>`
-              : k === "status" ? `<span class="sw" style="background:rgb(${STATUS_RGB[0]})"></span> not compared <span class="sw" style="background:rgb(${STATUS_RGB[1]})"></span> pass <span class="sw" style="background:rgb(${STATUS_RGB[2]})"></span> fail <span id="status-count"></span>`
+              : k === "status" ? `<span class="sw" style="background:var(--skip)"></span> not compared <span class="sw" style="background:rgb(${STATUS_RGB[1]})"></span> pass <span class="sw" style="background:rgb(${STATUS_RGB[2]})"></span> fail <span id="status-count"></span>`
               : "";
   grid.insertAdjacentHTML("beforeend",
     `<div class="pane" data-pane="${k}">` +
@@ -235,6 +268,26 @@ document.querySelector(".cbar").style.background = `linear-gradient(to right, ${
 $("pane-toggles").innerHTML = "panes " + KEYS.map(k => `<button data-pane="${k}" title="show / hide">${SHORT[k]}</button>`).join("");
 const paneEl = (k) => grid.querySelector(`.pane[data-pane="${k}"]`);
 const views = [...grid.querySelectorAll(".view")];
+
+// Canvas colours that come from the theme: the pane background, which elements outside the
+// comparison fade into, and the "not compared" status colour.
+function cssColor(name, fallback) {
+  const ctx = document.createElement("canvas").getContext("2d");
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue(name).trim() || "#000";
+  const c = ctx.fillStyle;  // normalized to "#rrggbb" or "rgba(r, g, b, a)"
+  if (c[0] === "#") return [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+  const m = c.match(/[\d.]+/g);
+  return m ? m.slice(0, 3).map(Number) : fallback;
+}
+function readTheme() {
+  BG_RGB = cssColor("--canvas", BG_RGB);
+  STATUS_RGB[0] = cssColor("--skip", STATUS_RGB[0]);
+}
+readTheme();
+// VS Code rewrites the theme variables on <html> and the theme class on <body> when the theme changes.
+const themeWatch = new MutationObserver(() => { readTheme(); draw(); });
+themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+themeWatch.observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
 function shownPanes() { return maximized ? [maximized] : prefs.order.filter(k => !prefs.hidden.includes(k)); }
 function gridShape(n) {
@@ -482,8 +535,8 @@ function draw() {
     // Not compared: the test's own destination fill, which the kernel should not have touched.
     if (smax === 0 && outside !== "show")
       for (const im of [imgs[0][1], imgs[1][1]])
-        for (let q = 0; q < 3; ++q) im.data[p + q] = outside === "dim" ? im.data[p + q] * 0.25 : BG_RGB[q];
-    const dc = lut(v.peak ? dmax / v.peak : 0), sc = STATUS_RGB[smax];
+        for (let q = 0; q < 3; ++q) im.data[p + q] = outside === "dim" ? im.data[p + q] * 0.25 + BG_RGB[q] * 0.75 : BG_RGB[q];
+    const dc = smax ? lut(v.peak ? dmax / v.peak : 0) : BG_RGB, sc = STATUS_RGB[smax];
     for (let q = 0; q < 3; ++q) { imgs[2][1].data[p + q] = dc[q]; imgs[3][1].data[p + q] = sc[q]; }
     for (const [, im] of imgs) im.data[p + 3] = 255;
   }
