@@ -48,7 +48,11 @@ def main(argv: list[str] | None = None) -> int:
         for case in cases:
             for k, entry in enumerate(case.comparisons):
                 verdict = (
-                    "PASS" if case.passed else f"{entry['failed']}/{entry['compared']}"
+                    "PASS"
+                    if case.passed
+                    else f"{entry['failed']}/{entry['compared']}"
+                    if "failed" in entry
+                    else "FAIL"
                 )
                 suffix = f" [{k}]" if len(case.comparisons) > 1 else ""
                 print(f"{verdict:>13}  {case.name}{suffix}")

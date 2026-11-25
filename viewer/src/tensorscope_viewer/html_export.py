@@ -48,8 +48,9 @@ def _payload(case: Case, index: int) -> dict:
         "failed": cmp.failed,
         "ref": [ref_type, ref],
         "act": [act_type, act],
-        "diff": _pack(cmp.diff.astype("<f4")),
-        "status": _pack(cmp.status.astype(np.uint8)),
+        # Absent arrays go as null; the page derives diff and offers a threshold in place of status.
+        "diff": None if cmp.diff is None else _pack(cmp.diff.astype("<f4")),
+        "status": None if cmp.status is None else _pack(cmp.status.astype(np.uint8)),
     }
 
 

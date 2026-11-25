@@ -14,6 +14,7 @@
     --fail:var(--vscode-testing-iconFailed, #f85149); --pass:var(--vscode-testing-iconPassed, #3fb950);
     --pin:var(--vscode-charts-yellow, #ffd33d); --canvas:var(--vscode-editor-background, #010409);
     --skip:var(--vscode-testing-iconSkipped, #30363d);
+    --within:var(--vscode-descriptionForeground, #8b949e); --over:var(--vscode-charts-orange, #d18616);
     --hover:var(--vscode-list-hoverBackground, #1f2630);
     --sel-bg:var(--vscode-list-activeSelectionBackground, #1f6feb44); --sel-fg:var(--vscode-list-activeSelectionForeground, inherit);
     --sash:var(--vscode-sash-hoverBorder, #1f6feb66);
@@ -79,7 +80,9 @@
   #controls .sep { width:1px; align-self:stretch; background:var(--border); }
   #levels { display:flex; gap:8px; align-items:center; }
   #levels input[type=range] { width:90px; }
-  #levels input[type=number] { width:78px; padding:0 4px; background:var(--input-bg); color:var(--input-fg); border:1px solid var(--input-border); border-radius:var(--radius-sm); }
+  #thresh { display:flex; gap:6px; align-items:center; }
+  #thresh input[type=range] { width:110px; }
+  #thresh input[type=number], #levels input[type=number] { width:78px; padding:0 4px; background:var(--input-bg); color:var(--input-fg); border:1px solid var(--input-border); border-radius:var(--radius-sm); }
   #lv-auto.on { color:var(--accent); border-color:var(--accent); }
   #pane-toggles { display:flex; gap:4px; align-items:center; }
   #pane-toggles button:not(.on) { color:var(--dim); text-decoration:line-through; }
@@ -114,7 +117,7 @@
   #info td, #info th { padding:1px 8px 1px 0; text-align:right; }
   #info th { color:var(--dim); font-weight:normal; text-align:left; }
   .pinnote { color:var(--pin); font-size:11px; }
-  .FAIL { color:var(--fail); } .pass { color:var(--pass); } .skip { color:var(--dim); }
+  .FAIL { color:var(--fail); } .pass { color:var(--pass); } .skip { color:var(--dim); } .over { color:var(--over); }
   pre { white-space:pre-wrap; word-break:break-all; color:var(--dim); margin:0; }
   .help { color:var(--dim); }
 
@@ -150,7 +153,9 @@
   <div id="controls">
     <span id="sliders"></span>
     <label>channel <select id="channel"></select></label>
-    <label>outside ROI <select id="outside"><option value="dim">dim</option><option value="hide">hide</option><option value="show">show</option></select></label>
+    <span id="thresh" style="display:none" title="the bundle has no per-element verdict; this marks elements whose |actual − reference| exceeds the threshold">|diff| &gt;
+      <input id="th-r" type="range" min="0" max="1000" value="0"><input id="th" type="number" step="any" min="0" value="0"></span>
+    <label id="outside-ctl">outside ROI <select id="outside"><option value="dim">dim</option><option value="hide">hide</option><option value="show">show</option></select></label>
     <span id="levels">display
       <label title="value shown as black">min <input id="lv-lo-r" type="range"><input id="lv-lo" type="number" step="any"></label>
       <label title="value shown as white">max <input id="lv-hi-r" type="range"><input id="lv-hi" type="number" step="any"></label>
@@ -176,7 +181,7 @@
   <table>
     <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>previous / next case</td></tr>
     <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>step the innermost leading axis (depth, else batch); with <kbd>Shift</kbd>, the outermost</td></tr>
-    <tr><td><kbd>n</kbd> <kbd>N</kbd></td><td>jump to next / previous failing element, across slices</td></tr>
+    <tr><td><kbd>n</kbd> <kbd>N</kbd></td><td>jump to next / previous failing (or over-threshold) element, across slices</td></tr>
     <tr><td><kbd>f</kbd></td><td>fit zoom to pane</td></tr>
     <tr><td><kbd>+</kbd> <kbd>−</kbd></td><td>zoom in / out (wheel zooms about the cursor)</td></tr>
     <tr><td><kbd>a</kbd></td><td>reset display min/max to auto</td></tr>
@@ -205,6 +210,9 @@ const STATUS_RGB = [[48,54,61],[46,160,67],[248,81,73]];  // [0] follows the the
 let BG_RGB = [1, 4, 9];  // the pane background; follows the VS Code theme, see readTheme()
 const STATUS_NAME = ["not compared", "pass", "FAIL"];
 const STATUS_CLS = ["skip", "pass", "FAIL"];
+// Without a status array the status pane marks elements over a viewer-side threshold instead, in
+// colours of its own so it can't be mistaken for the test's verdict. [0] is unused.
+const THRESH_RGB = [[0,0,0],[139,148,158],[209,134,22]];  // follow the theme, see readTheme()
 const PANES = { ref: "reference", act: "actual", diff: "|actual − reference|", status: "status" };
 const SHORT = { ref: "ref", act: "actual", diff: "diff", status: "status" };
 const KEYS = Object.keys(PANES);
@@ -231,11 +239,11 @@ function request(index) {
 }
 async function arrays(e, i) {
   if (e.ref) return { ref: await typed(e.ref), act: await typed(e.act),
-                      diff: new Float32Array(await unpack(e.diff)), status: new Uint8Array(await unpack(e.status)) };
+                      diff: e.diff && new Float32Array(await unpack(e.diff)), status: e.status && new Uint8Array(await unpack(e.status)) };
   const a = await request(i), vals = ([t, b]) => t === "f8" ? new Float64Array(b) : new Float32Array(b);
   e.shape = a.shape;
   e.dtypes = a.dtypes;
-  return { ref: vals(a.ref), act: vals(a.act), diff: new Float32Array(a.diff), status: new Uint8Array(a.status) };
+  return { ref: vals(a.ref), act: vals(a.act), diff: a.diff && new Float32Array(a.diff), status: a.status && new Uint8Array(a.status) };
 }
 
 // Decoded comparisons, most recently used last. Bounded so a long session over a large capture
@@ -259,8 +267,11 @@ async function decode(i) {
   let dims = hasC ? e.shape.slice(0, -1) : e.shape.slice();
   let labels = hasC ? e.axes.slice(0, -1) : e.axes.slice();
   if (dims.length === 1) { dims = [1, ...dims]; labels = ["", ...labels]; }
+  // diff and status are optional in a bundle: diff is derived; without status, see applyThreshold().
+  const n = a.ref.length, diff = a.diff || new Float32Array(n);
+  if (!a.diff) for (let o = 0; o < n; ++o) diff[o] = a.status && a.status[o] === 0 ? NaN : a.act[o] - a.ref[o];
   const v = { e, C, rgb: C === 3, dims, labels, H: dims[dims.length - 2], W: dims[dims.length - 1],
-              ref: a.ref, act: a.act, diff: a.diff, status: a.status };
+              ref: a.ref, act: a.act, diff, verdict: !!a.status, status: a.status || new Uint8Array(n) };
   // 8-bit types display their full range; float types are stretched per slice in draw().
   v.lim = { uint8: [0, 255], int8: [-128, 127] }[e.dtypes[1]] || null;
   // Slider domain for manual levels: the type range, else everything in reference and actual.
@@ -271,8 +282,29 @@ async function decode(i) {
     v.dom = lo === Infinity ? [0, 1] : hi > lo ? [lo, hi] : [lo - 0.5, hi + 0.5];
   }
   v.peak = 0;
-  for (const d of v.diff) if (Math.abs(d) > v.peak) v.peak = Math.abs(d);
+  v.floor = Infinity;  // smallest nonzero |diff|, the low end of the log threshold slider
+  for (const d of v.diff) {
+    const m = Math.abs(d);
+    if (m > v.peak) v.peak = m;
+    if (m > 0 && m < v.floor) v.floor = m;
+  }
+  if (!v.verdict) applyThreshold(v);
   return v;
+}
+
+// Marks status 2 where |diff| exceeds the threshold and 1 elsewhere, for bundles with no verdict.
+// Equal values pass even when diff is NaN (matching infinities, or NaN expected and produced).
+let threshold = 0;
+function applyThreshold(v) {
+  let over = 0;
+  for (let o = 0; o < v.status.length; ++o) {
+    const r = v.ref[o], a = v.act[o];
+    const bad = !(Math.abs(v.diff[o]) <= threshold) && r !== a && !(Number.isNaN(r) && Number.isNaN(a));
+    v.status[o] = bad ? 2 : 1;
+    over += bad;
+  }
+  v.th = threshold;
+  v.over = over;
 }
 
 // ---- persisted layout preferences --------------------------------------------
@@ -292,7 +324,7 @@ let zoom = 8, maximized = null, levels = null;  // levels: manual [lo, hi], or n
 const grid = $("grid");
 for (const k of KEYS) {
   const extra = k === "diff" ? `<span class="cbar"></span><span id="diff-peak"></span>`
-              : k === "status" ? `<span class="sw" style="background:var(--skip)"></span> not compared <span class="sw" style="background:rgb(${STATUS_RGB[1]})"></span> pass <span class="sw" style="background:rgb(${STATUS_RGB[2]})"></span> fail <span id="status-count"></span>`
+              : k === "status" ? `<span id="status-legend"></span> <span id="status-count"></span>`
               : "";
   grid.insertAdjacentHTML("beforeend",
     `<div class="pane" data-pane="${k}">` +
@@ -319,6 +351,57 @@ function cssColor(name, fallback) {
 function readTheme() {
   BG_RGB = cssColor("--canvas", BG_RGB);
   STATUS_RGB[0] = cssColor("--skip", STATUS_RGB[0]);
+  THRESH_RGB[1] = cssColor("--within", THRESH_RGB[1]);
+  THRESH_RGB[2] = cssColor("--over", THRESH_RGB[2]);
+}
+
+// The status pane shows the test's verdict when the bundle has one, else the viewer's threshold.
+function renderStatusHead(v) {
+  const sw = (bg) => `<span class="sw" style="background:${bg}"></span>`;
+  const head = paneEl("status").querySelector(".phead");
+  head.querySelector(".ptitle").textContent = v.verdict ? PANES.status : "|diff| > threshold";
+  head.title = (v.verdict ? "" : "no per-element verdict in this bundle; the viewer marks elements over the threshold · ") +
+    "drag onto another pane to swap · double-click to maximize";
+  $("status-legend").innerHTML = v.verdict
+    ? `${sw("var(--skip)")} not compared ${sw(`rgb(${STATUS_RGB[1]})`)} pass ${sw(`rgb(${STATUS_RGB[2]})`)} fail`
+    : `${sw("var(--within)")} ≤ ${fmt(threshold)} ${sw("var(--over)")} over`;
+  $("thresh").style.display = v.verdict ? "none" : "";
+  $("outside-ctl").style.display = v.verdict ? "" : "none";
+}
+
+function renderMeta(v) {
+  const e = v.e;
+  const result = v.verdict
+    ? `<span class="${e.failed ? "FAIL" : "pass"}">${e.failed} of ${e.compared} compared failed</span>`
+    : `no per-element verdict · <span class="over">${v.over} of ${v.status.length} over ${fmt(threshold)}</span>`;
+  $("meta").innerHTML = `${e.kind} shape=(${e.shape}) axes=${e.axes.join(",")} reference=${e.dtypes[0]} actual=${e.dtypes[1]} · ` +
+    `${result} · max |diff| ${fmt(v.peak)}`;
+}
+
+// Threshold slider: position 0 is exact equality, the rest spans [floor, peak] on a log scale.
+const TH_STEPS = 1000;
+function thresholdAt(v, pos) {
+  if (pos <= 0 || !(v.peak > 0)) return 0;
+  return v.floor * (v.peak / v.floor) ** ((pos - 1) / (TH_STEPS - 1));
+}
+function thresholdPos(v, t) {
+  if (!(t > 0) || !(v.peak > 0)) return 0;
+  if (v.peak === v.floor) return t >= v.peak ? TH_STEPS : 1;
+  return clamp(Math.round(1 + (TH_STEPS - 1) * Math.log(t / v.floor) / Math.log(v.peak / v.floor)), 1, TH_STEPS);
+}
+function syncThreshold(v) {
+  $("th-r").disabled = !(v.peak > 0);
+  $("th-r").value = thresholdPos(v, threshold);
+  if (document.activeElement !== $("th")) $("th").value = +threshold.toPrecision(6);
+}
+function setThreshold(t) {
+  if (!view || view.verdict || !Number.isFinite(t)) return;
+  threshold = Math.max(0, t);
+  applyThreshold(view);
+  renderStatusHead(view);
+  renderMeta(view);
+  syncThreshold(view);
+  draw();
 }
 readTheme();
 // VS Code rewrites the theme variables on <html> and the theme class on <body> when the theme changes.
@@ -460,7 +543,7 @@ function renderList() {
   $("counts").innerHTML = `${visible.length} of ${ENTRIES.length} comparisons · <span class="${failing ? "FAIL" : "pass"}">${failing} failing</span>`;
   $("list").innerHTML = visible.length ? visible.map(i => {
     const e = ENTRIES[i], tag = e.count > 1 ? ` [${e.index}]` : "";
-    const n = e.passed ? `<span class="n ok">PASS</span>` : `<span class="n">${e.failed}/${e.compared}</span>`;
+    const n = e.passed ? `<span class="n ok">PASS</span>` : `<span class="n">${e.failed == null ? "FAIL" : `${e.failed}/${e.compared}`}</span>`;
     const [, fixture = "", param = e.case] = e.case.match(/^[^/]*\/([^.]*)\.[^/]*\/(.*)$/) || [];
     return `<div data-i="${i}" class="${i === current ? "sel" : ""}" title="${e.case}">${n}<span class="fx">${fixture}</span> ${param}${tag}</div>`;
   }).join("") : `<div class="empty">${ENTRIES.length ? "no cases match" : "no comparisons in this capture"}</div>`;
@@ -486,14 +569,16 @@ async function select(i) {
   const e = v.e;
   const sameSize = view && view.W === v.W && view.H === v.H;
   if (i !== current) levels = null;
+  if (!v.verdict && v.th !== threshold) applyThreshold(v);  // cached under an older threshold
   current = i;
   view = v;
   host?.postMessage({ type: "selected", index: i });
   document.querySelectorAll("#list div").forEach(d => d.classList.toggle("sel", +d.dataset.i === i));
   document.querySelector(`#list div[data-i="${i}"]`)?.scrollIntoView({ block: "nearest" });
   $("title").textContent = e.case + (e.count > 1 ? ` [${e.index}]` : "");
-  $("meta").innerHTML = `${e.kind} shape=(${e.shape}) axes=${e.axes.join(",")} reference=${e.dtypes[0]} actual=${e.dtypes[1]} · ` +
-    `<span class="${e.failed ? "FAIL" : "pass"}">${e.failed} of ${e.compared} compared failed</span> · max |diff| ${fmt(v.peak)}`;
+  renderMeta(v);
+  renderStatusHead(v);
+  if (!v.verdict) syncThreshold(v);
   $("failure").textContent = e.failure || "—";
 
   // Leading-axis positions are kept when the next case has the same axes.
@@ -592,12 +677,14 @@ function draw() {
     if (smax === 0 && outside !== "show")
       for (const im of [imgs[0][1], imgs[1][1]])
         for (let q = 0; q < 3; ++q) im.data[p + q] = outside === "dim" ? im.data[p + q] * 0.25 + BG_RGB[q] * 0.75 : BG_RGB[q];
-    const dc = smax ? lut(v.peak ? dmax / v.peak : 0) : BG_RGB, sc = STATUS_RGB[smax];
+    const dc = smax ? lut(v.peak ? dmax / v.peak : 0) : BG_RGB, sc = (v.verdict ? STATUS_RGB : THRESH_RGB)[smax];
     for (let q = 0; q < 3; ++q) { imgs[2][1].data[p + q] = dc[q]; imgs[3][1].data[p + q] = sc[q]; }
     for (const [, im] of imgs) im.data[p + 3] = 255;
   }
   for (const [cv, im] of imgs) cv.getContext("2d").putImageData(im, 0, 0);
-  $("status-count").innerHTML = `· slice: <span class="${nFail ? "FAIL" : "pass"}">${nFail}</span>/${nCmp} px failing`;
+  $("status-count").innerHTML = v.verdict
+    ? `· slice: <span class="${nFail ? "FAIL" : "pass"}">${nFail}</span>/${nCmp} px failing`
+    : `· slice: <span class="over">${nFail}</span>/${nCmp} px over`;
   if (hover) inspect(hover[0], hover[1]);
 }
 
@@ -697,7 +784,9 @@ function inspect(y, x) {
   const rows = [];
   for (let c = 0; c < v.C; ++c) {
     const o = offset(v, y, x, c), s = v.status[o];
-    rows.push(`<tr><th>${v.C > 1 ? "c=" + c : ""}</th><td>${fmt(v.ref[o])}</td><td>${fmt(v.act[o])}</td><td>${fmt(v.diff[o])}</td><td class="${STATUS_CLS[s]}">${STATUS_NAME[s]}</td></tr>`);
+    const verdict = v.verdict ? `<td class="${STATUS_CLS[s]}">${STATUS_NAME[s]}</td>`
+                              : `<td class="${s === 2 ? "over" : "skip"}">${s === 2 ? "over" : "within"}</td>`;
+    rows.push(`<tr><th>${v.C > 1 ? "c=" + c : ""}</th><td>${fmt(v.ref[o])}</td><td>${fmt(v.act[o])}</td><td>${fmt(v.diff[o])}</td>${verdict}</tr>`);
   }
   const pin = pinned ? ` <span class="pinnote">● pinned (click or Esc to release)</span>` : "";
   $("pixel").innerHTML = `<b>${where}</b>${pin}<table><tr><th></th><th>ref</th><th>actual</th><th>diff</th><th></th></tr>${rows.join("")}</table>`;
@@ -731,7 +820,7 @@ function jumpFail(dir) {
     centerOn(y, x);
     return;
   }
-  toast("no failing elements in this comparison");
+  toast(v.verdict ? "no failing elements in this comparison" : "no elements over the threshold");
 }
 
 // ---- small helpers -----------------------------------------------------------------
@@ -764,6 +853,8 @@ for (const id of ["lo", "hi"]) {
   $(`lv-${id}`).onchange = (ev) => setLevel(id, parseFloat(ev.target.value));
 }
 $("lv-auto").onclick = () => { levels = null; draw(); };
+$("th-r").oninput = (ev) => view && setThreshold(thresholdAt(view, +ev.target.value));
+$("th").onchange = (ev) => setThreshold(parseFloat(ev.target.value));
 $("zoom").oninput = () => zoomCenter(+$("zoom").value);
 $("fit").onclick = fitZoom;
 $("layout").onchange = () => { prefs.layout = $("layout").value; maximized = null; layoutGrid(); save(); };

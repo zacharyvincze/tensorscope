@@ -180,10 +180,13 @@ export class CasesView implements vscode.TreeDataProvider<Node>, vscode.Disposab
         const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
         item.id = `entry:${key(node)}`;
         item.iconPath = icon(c.passed);
-        item.description = c.passed ? undefined : `${cmp.failed}/${cmp.compared}`;
+        const counted = cmp.failed !== undefined;
+        item.description = c.passed || !counted ? undefined : `${cmp.failed}/${cmp.compared}`;
         const tip = new vscode.MarkdownString();
         tip.appendMarkdown(`**${c.name}**${c.comparisons.length > 1 ? ` [${node.comparison}]` : ""}\n\n`);
-        tip.appendMarkdown(`${cmp.kind} · ${cmp.failed} of ${cmp.compared} compared elements failed`);
+        tip.appendMarkdown(`${cmp.kind} · ` + (counted
+            ? `${cmp.failed} of ${cmp.compared} compared elements failed`
+            : "no per-element verdict"));
         const failure = c.failure.trim();
         if (failure) tip.appendCodeblock(failure.length > 2000 ? failure.slice(0, 2000) + "\n…" : failure, "text");
         item.tooltip = tip;

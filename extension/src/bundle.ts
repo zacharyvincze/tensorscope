@@ -11,9 +11,9 @@ export const VERSION = 1;
 interface ComparisonEntry {
     kind: string;
     axes: string[];
-    compared: number;
-    failed: number;
-    arrays: Record<"reference" | "actual" | "diff" | "status", string>;
+    compared?: number;  // present, like failed, exactly when status is
+    failed?: number;
+    arrays: { reference: string; actual: string; diff?: string; status?: string };
 }
 
 export interface Case {
@@ -167,19 +167,20 @@ export function entryMeta(c: Case, k: number): object {
 }
 
 // The rest of the entry, sent when the page opens the comparison. ArrayBuffers cross postMessage as
-// binary, so nothing is base64-encoded or compressed on this path.
+// binary, so nothing is base64-encoded or compressed on this path. Absent arrays go as null.
 export async function entryArrays(c: Case, k: number) {
     const e = c.comparisons[k];
+    const optional = (file?: string) => (file ? load(c, file) : Promise.resolve(null));
     const [ref, act, diff, status] = await Promise.all(
-        (["reference", "actual", "diff", "status"] as const).map((r) => load(c, e.arrays[r])));
-    const f32 = elements(diff), u8 = elements(status);
+        [load(c, e.arrays.reference), load(c, e.arrays.actual), optional(e.arrays.diff), optional(e.arrays.status)]);
+    const f32 = diff && elements(diff), u8 = status && elements(status);
     return {
         shape: ref.shape,
         dtypes: [DTYPE_NAMES[ref.descr] ?? ref.descr, DTYPE_NAMES[act.descr] ?? act.descr],
         ref: values(ref),
         act: values(act),
-        diff: (f32 instanceof Float32Array ? f32 : Float32Array.from(f32)).buffer as ArrayBuffer,
-        status: (u8 instanceof Uint8Array ? u8 : Uint8Array.from(u8)).buffer as ArrayBuffer,
+        diff: f32 && ((f32 instanceof Float32Array ? f32 : Float32Array.from(f32)).buffer as ArrayBuffer),
+        status: u8 && ((u8 instanceof Uint8Array ? u8 : Uint8Array.from(u8)).buffer as ArrayBuffer),
     };
 }
 

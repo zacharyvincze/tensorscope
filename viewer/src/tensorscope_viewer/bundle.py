@@ -18,12 +18,12 @@ NOT_COMPARED, PASS, FAIL = 0, 1, 2
 class Comparison:
     kind: str
     axes: list[str]
-    compared: int
-    failed: int
+    compared: int | None  # None, like failed, when there is no status
+    failed: int | None
     reference: np.ndarray
     actual: np.ndarray
-    diff: np.ndarray  # actual - reference, NaN where not compared
-    status: np.ndarray  # NOT_COMPARED / PASS / FAIL
+    diff: np.ndarray | None  # actual - reference, NaN where not compared; None if not written
+    status: np.ndarray | None  # NOT_COMPARED / PASS / FAIL; None if not written
 
 
 @dataclass
@@ -36,7 +36,7 @@ class Case:
 
     @property
     def failed_elements(self) -> int:
-        return sum(c["failed"] for c in self.comparisons)
+        return sum(c.get("failed", 0) for c in self.comparisons)
 
     def load(self, index: int) -> Comparison:
         entry = self.comparisons[index]
@@ -46,9 +46,12 @@ class Case:
         return Comparison(
             entry["kind"],
             list(entry["axes"]),
-            entry["compared"],
-            entry["failed"],
-            **arrays,
+            entry.get("compared"),
+            entry.get("failed"),
+            arrays["reference"],
+            arrays["actual"],
+            arrays.get("diff"),
+            arrays.get("status"),
         )
 
 

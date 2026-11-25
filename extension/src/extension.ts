@@ -60,14 +60,14 @@ async function open(context: vscode.ExtensionContext, root: string): Promise<voi
     const isFile = (await fs.stat(root)).isFile();
     const label = path.basename(isFile ? path.dirname(root) : root);
     const panel = vscode.window.createWebviewPanel(
-        "tensorscope", `tensorscope: ${label}`, vscode.ViewColumn.Active,
+        "tensorscope", `Tensorscope: ${label}`, vscode.ViewColumn.Active,
         { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] });
     const capture = new Capture(root, label, panel);
     captures.set(root, capture);
 
     const template = path.join(context.extensionPath, "media", "html_viewer.html");
     capture.reload = () => vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Window, title: `tensorscope: loading ${label}` },
+        { location: vscode.ProgressLocation.Window, title: `Tensorscope: loading ${label}` },
         async () => {
             try {
                 const found = await findCases(root);
@@ -75,7 +75,7 @@ async function open(context: vscode.ExtensionContext, root: string): Promise<voi
                 panel.webview.html = await html(panel.webview, template, root, found);
                 if (cases.active === capture) cases.show(capture);
             } catch (err) {
-                vscode.window.showErrorMessage(`tensorscope: ${(err as Error).message}`);
+                vscode.window.showErrorMessage(`Tensorscope: ${(err as Error).message}`);
             }
         });
 

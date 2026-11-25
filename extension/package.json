@@ -1,9 +1,9 @@
 {
   "name": "tensorscope",
-  "displayName": "tensorscope",
+  "displayName": "Tensorscope",
   "description": "Visual debugger for tensor comparison test captures",
   "version": "0.2.0",
-  "publisher": "tensorscope",
+  "publisher": "zacharyvincze",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -25,7 +25,7 @@
       "activitybar": [
         {
           "id": "tensorscope",
-          "title": "tensorscope",
+          "title": "Tensorscope",
           "icon": "resources/tensorscope.svg"
         }
       ]
@@ -35,7 +35,7 @@
         {
           "id": "tensorscope.cases",
           "name": "Cases",
-          "contextualTitle": "tensorscope"
+          "contextualTitle": "Tensorscope"
         }
       ]
     },
@@ -49,37 +49,37 @@
       {
         "command": "tensorscope.open",
         "title": "Open Capture\u2026",
-        "category": "tensorscope",
+        "category": "Tensorscope",
         "icon": "$(folder-opened)"
       },
       {
         "command": "tensorscope.failingOnly",
         "title": "Show Failing Cases Only",
-        "category": "tensorscope",
+        "category": "Tensorscope",
         "icon": "$(filter)"
       },
       {
         "command": "tensorscope.allCases",
         "title": "Show All Cases",
-        "category": "tensorscope",
+        "category": "Tensorscope",
         "icon": "$(filter-filled)"
       },
       {
         "command": "tensorscope.reload",
         "title": "Reload Capture",
-        "category": "tensorscope",
+        "category": "Tensorscope",
         "icon": "$(refresh)"
       },
       {
         "command": "tensorscope.copyFilter",
         "title": "Copy GTest Filter",
-        "category": "tensorscope",
+        "category": "Tensorscope",
         "icon": "$(copy)"
       },
       {
         "command": "tensorscope.openManifest",
         "title": "Open Manifest",
-        "category": "tensorscope",
+        "category": "Tensorscope",
         "icon": "$(go-to-file)"
       }
     ],
