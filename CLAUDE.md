@@ -33,7 +33,7 @@ Consumers fetch the library with `FetchContent` behind an opt-in build option, s
 
 ### Extension
 
-The extension is the only reader. It is TypeScript in three parts: `src/extension/` (Node: commands, the Cases view, one `CapturePanel` per capture tab, the bundle reader), `src/webview/` (the page, built in TypeScript with no framework), and `src/shared/protocol.ts`, which types every message between them. Each part is type-checked against its own environment (`tsconfig.json`, `src/webview/tsconfig.json`), and esbuild bundles both into `out/`. The extension's README maps the files.
+The extension is the only reader. It is TypeScript in three parts: `src/extension/` (Node: commands, the Cases view, one `CapturePanel` per capture tab, the bundle reader), `src/webview/` (the page, built in TypeScript with no framework), and `src/shared/protocol.ts`, which types every message between them. Each part is type-checked against its own environment (`tsconfig.json`, `src/webview/tsconfig.json`), and esbuild bundles both into `out/`. `extension/DEVELOPMENT.md` maps the files; `extension/README.md` is the user-facing page shown in VS Code's Extensions view.
 
 - A message or setting changes in `protocol.ts` first; the compiler then points at both sides.
 - The page keeps its state in `App` (`src/webview/app.ts`); components render from it and call its actions. Data logic (`model.ts`, `render.ts`, `format.ts`) stays free of the DOM, so `npm test` covers it.
