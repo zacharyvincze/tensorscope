@@ -1,4 +1,2 @@
-foreach(example basic without_verdicts)
-    add_executable(tensorscope_example_${example} ${example}.cpp)
-    target_link_libraries(tensorscope_example_${example} PRIVATE tensorscope::capture)
-endforeach()
+add_executable(tensorscope_example_pack_bundle pack_bundle.cpp)
+target_link_libraries(tensorscope_example_pack_bundle PRIVATE tensorscope::capture)
