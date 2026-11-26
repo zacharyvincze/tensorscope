@@ -61,6 +61,8 @@ export interface Prefs {
     tracks: Record<string, Tracks>;
     /** Width of the inspector panel in px. */
     inspector: number;
+    /** Whether the inspector panel (pixel, comparison, test failure) is shown. */
+    inspectorShown: boolean;
     outside: Outside;
 }
 
@@ -70,7 +72,8 @@ export type Command =
     | { name: "shortcuts" }
     | { name: "resetLayout" }
     | { name: "arrange"; arrangement: Arrangement }
-    | { name: "showPane"; pane: Pane; shown: boolean };
+    | { name: "showPane"; pane: Pane; shown: boolean }
+    | { name: "showInspector"; shown: boolean };
 
 /** Extension -> page. */
 export type HostMessage =
@@ -100,6 +103,7 @@ export const DEFAULT_PREFS: Prefs = {
     arrangement: "grid",
     tracks: {},
     inspector: 320,
+    inspectorShown: true,
     outside: "dim",
 };
 
@@ -124,6 +128,7 @@ export function sanitizePrefs(stored: unknown): Prefs {
         arrangement: ARRANGEMENTS.includes(p.arrangement as Arrangement) ? (p.arrangement as Arrangement) : "grid",
         tracks,
         inspector: typeof p.inspector === "number" && p.inspector >= 160 ? p.inspector : DEFAULT_PREFS.inspector,
+        inspectorShown: typeof p.inspectorShown === "boolean" ? p.inspectorShown : DEFAULT_PREFS.inspectorShown,
         outside: OUTSIDE_MODES.includes(p.outside as Outside) ? (p.outside as Outside) : "dim",
     };
 }

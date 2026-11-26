@@ -1,7 +1,7 @@
 // The toolbar under the header: slice position, channel, failure navigation, and zoom.
 
 import type { App } from "./app";
-import { Segmented, fill, h, iconButton } from "./dom";
+import { Segmented, fill, h, icon, iconButton } from "./dom";
 import { fmtCount } from "./format";
 import { failingCount } from "./model";
 
@@ -18,12 +18,14 @@ export class Toolbar {
     private ranges: HTMLInputElement[] = [];
     /** The channel buttons, when there are few enough channels for buttons rather than a list. */
     private channelButtons: Segmented<string> | null = null;
+    private readonly inspectorToggle: HTMLButtonElement;
 
     constructor(private readonly app: App) {
         this.prevFailure = iconButton("arrow-up", "Previous failing pixel (Shift+N)", () => app.jumpToFailure(-1));
         this.nextFailure = iconButton("arrow-down", "Next failing pixel (N)", () => app.jumpToFailure(1));
         fill(this.failures, h("span", { className: "label", textContent: "Failures" }), this.failureCount, this.prevFailure, this.nextFailure);
         this.zoomText = h("button", { className: "zoom-text", title: "Fit to pane (F)", onclick: () => app.fit() });
+        this.inspectorToggle = iconButton("layout-sidebar-right", "", () => app.toggleInspector());
         this.el = h("div", { className: "toolbar", role: "toolbar", ariaLabel: "View" },
             this.slices,
             this.channel,
@@ -33,7 +35,8 @@ export class Toolbar {
                 iconButton("zoom-out", "Zoom out (−)", () => app.zoomBy(-1)),
                 this.zoomText,
                 iconButton("zoom-in", "Zoom in (+)", () => app.zoomBy(1)),
-                iconButton("screen-full", "Fit to pane (F)", () => app.fit())));
+                iconButton("screen-full", "Fit to pane (F)", () => app.fit())),
+            h("div", { className: "group" }, this.inspectorToggle));
     }
 
     /** Rebuilds the controls that depend on the shown comparison's shape. */
@@ -79,6 +82,10 @@ export class Toolbar {
 
     /** Refreshes the values shown, after a step, a zoom, or a threshold change. */
     update(): void {
+        const shown = this.app.prefs.inspectorShown;
+        fill(this.inspectorToggle, icon(shown ? "layout-sidebar-right" : "layout-sidebar-right-off"));
+        this.inspectorToggle.title = this.inspectorToggle.ariaLabel = `${shown ? "Hide" : "Show"} the inspector (I)`;
+        this.inspectorToggle.ariaPressed = String(shown);
         const v = this.app.view;
         if (!v) return;
         const lead = this.app.lead;

@@ -14,9 +14,9 @@ The tab shows one comparison at a time:
 - **Header:** the test's verdict, the case name, and a summary: kind, shape, element types, how many elements failed, and the largest difference. The copy button copies the case's `--gtest_filter`.
 - **Toolbar:** steppers for any leading axes (batch, depth), the channel to show, buttons that jump to the previous or next failing pixel, and zoom.
 - **Panes:** reference, actual, `|actual − reference|`, and status, with linked zoom and pan. Click the range in a reference or actual pane's title to set the display range by hand. Drag a pane's title onto another to swap them, and double-click it to maximize. When the bundle has no per-element verdict, the status pane marks elements over a threshold you set instead, and says so.
-- **Inspector:** the values and verdict of the hovered pixel in every channel (click to pin it; it stays pinned as you step through cases), the comparison's details, and the test's failure text.
+- **Inspector:** the values and verdict of the hovered pixel in every channel (click to pin it; it stays pinned as you step through cases), the comparison's details, and the test's failure text. Hide it for more room with the sidebar button at the right of the toolbar, or `I`.
 
-**Layout…** in the tab's title bar arranges the panes as a grid, row or column and shows or hides each one. Its `…` menu lists the keyboard shortcuts (or press `?`) and reloads the capture. The layout, pane sizes and display options are remembered across tabs and sessions.
+**Layout…** in the tab's title bar arranges the panes as a grid, row or column and shows or hides each pane and the inspector. Its `…` menu lists the keyboard shortcuts (or press `?`) and reloads the capture. The layout, pane sizes and display options are remembered across tabs and sessions.
 
 The tab reloads by itself when bundles are added, changed, or removed under the opened directory, so rerunning the tests updates it. The selected case is kept across reloads. The extension runs on the workspace side (`extensionKind: workspace`), so over Remote-SSH it reads captures on the remote machine.
 

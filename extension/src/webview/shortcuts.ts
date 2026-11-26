@@ -31,6 +31,7 @@ const SHORTCUTS: readonly Shortcut[] = [
     { keys: ["a"], display: ["A"], description: "Automatic display range", group: "Image", run: (a) => a.setLevels(null) },
     { keys: ["n"], display: ["N"], description: "Next failing pixel, across slices", group: "Inspect", run: (a) => a.jumpToFailure(1) },
     { keys: ["N"], display: ["Shift", "N"], description: "Previous failing pixel", group: "Inspect", run: (a) => a.jumpToFailure(-1) },
+    { keys: ["i"], display: ["I"], description: "Show or hide the inspector", group: "Inspect", run: (a) => a.toggleInspector() },
     { keys: ["Escape"], display: ["Esc"], description: "Close a popup · restore a maximized pane · unpin", group: "Inspect", run: (a) => a.escape() },
     { keys: ["?"], display: ["?"], description: "Show these shortcuts", group: "Inspect", run: (a) => a.shortcuts.toggle() },
 ];

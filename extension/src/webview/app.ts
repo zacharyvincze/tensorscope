@@ -107,6 +107,7 @@ export class App {
             case "resetLayout": return this.resetLayout();
             case "arrange": return this.arrange(c.arrangement);
             case "showPane": return this.showPane(c.pane, c.shown);
+            case "showInspector": return this.showInspector(c.shown);
         }
     }
 
@@ -206,7 +207,7 @@ export class App {
     }
 
     private refreshAll(): void {
-        this.inspector.el.hidden = this.inspectorSplitter.hidden = !this.entry;
+        this.layoutInspector();
         this.header.update();
         this.toolbar.rebuild();
         this.inspector.updateDetails();
@@ -379,7 +380,7 @@ export class App {
     // ---- pane layout
 
     private applyPrefs(): void {
-        this.inspector.width = this.prefs.inspector;
+        this.layoutInspector();
         this.panes.layout();
         this.draw();
     }
@@ -423,8 +424,26 @@ export class App {
 
     resetLayout(): void {
         this.maximized = null;
-        this.changeLayout(() => Object.assign(this.prefs, { order: [...PANES], hidden: [], arrangement: "grid", tracks: {} }));
+        this.changeLayout(() => Object.assign(this.prefs, { order: [...PANES], hidden: [], arrangement: "grid", tracks: {}, inspectorShown: true }));
+        this.layoutInspector();
         this.fit();
+    }
+
+    // The inspector shows only with a comparison to describe, and only if the user hasn't hidden it.
+    private layoutInspector(): void {
+        this.inspector.width = this.prefs.inspector;
+        this.inspector.el.hidden = this.inspectorSplitter.hidden = !this.entry || !this.prefs.inspectorShown;
+        this.toolbar.update();
+    }
+
+    showInspector(shown: boolean): void {
+        this.prefs.inspectorShown = shown;
+        this.layoutInspector();
+        this.savePrefs();
+    }
+
+    toggleInspector(): void {
+        this.showInspector(!this.prefs.inspectorShown);
     }
 
     private dragInspector(ev: MouseEvent): void {

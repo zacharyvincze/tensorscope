@@ -11,7 +11,7 @@ describe("sanitizePrefs", () => {
     it("keeps valid settings", () => {
         const prefs = {
             order: ["status", "diff", "act", "ref"], hidden: ["diff"], arrangement: "row",
-            tracks: { "row:3x1": { cols: [1, 2, 1], rows: [1] } }, inspector: 400, outside: "hide",
+            tracks: { "row:3x1": { cols: [1, 2, 1], rows: [1] } }, inspector: 400, inspectorShown: false, outside: "hide",
         };
         assert.deepEqual(sanitizePrefs(prefs), prefs);
     });

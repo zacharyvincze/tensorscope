@@ -65,7 +65,7 @@ function pickLayout(prefs: PrefsStore, command: (c: Command) => void): void {
     qp.placeholder = "Arrange the panes, or show and hide them";
     const sep = (label: string): LayoutItem => ({ label, kind: vscode.QuickPickItemKind.Separator });
     const render = () => {
-        const { arrangement, hidden } = prefs.get();
+        const { arrangement, hidden, inspectorShown } = prefs.get();
         const at = qp.activeItems.length ? qp.items.indexOf(qp.activeItems[0]) : -1;
         qp.items = [
             sep("Arrangement"),
@@ -82,6 +82,12 @@ function pickLayout(prefs: PrefsStore, command: (c: Command) => void): void {
                     command: { name: "showPane", pane, shown: !shown },
                 };
             }),
+            sep("Side panel"),
+            {
+                label: `$(${inspectorShown ? "eye" : "eye-closed"}) Inspector`,
+                description: inspectorShown ? "pixel, comparison, test failure" : "hidden",
+                command: { name: "showInspector", shown: !inspectorShown },
+            },
             sep(""),
             { label: "$(discard) Reset Layout", description: "default order, sizes and panes", command: { name: "resetLayout" } },
         ];
