@@ -4,11 +4,10 @@
 #include <gtest/gtest.h>
 
 #include <cstdio>
-#include <cstdlib>
+#include <exception>
 #include <filesystem>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "capture.hpp"
 
@@ -16,6 +15,7 @@
 // Kept apart from capture.hpp so the core carries no GTest dependency.
 
 namespace tensorscope {
+inline namespace v1 {
 
 namespace detail {
 
@@ -33,16 +33,27 @@ class CaptureListener : public ::testing::EmptyTestEventListener {
     CaptureListener(std::filesystem::path root, bool all) : root_(std::move(root)), all_(all) {}
 
     void OnTestStart(const ::testing::TestInfo&) override {
-        take_pending();
+        take_pending();  // drop anything submitted outside a test
     }
 
     void OnTestEnd(const ::testing::TestInfo& info) override {
         const ::testing::TestResult& result = *info.result();
-        const std::vector<Comparison> comparisons = take_pending();
-        if (!comparisons.empty() && (all_ || result.Failed())) {
-            // "Suite/Param.Test/Case" -> Suite/Param.Test/Case/ (the '/'s become directories).
-            const std::string name = std::string(info.test_suite_name()) + "." + info.name();
-            write_bundle(root_ / name, name, !result.Failed(), failure_text(result), comparisons);
+        Case c;
+        // "Suite/Param.Test/Case": each '/' becomes a directory level.
+        c.name = std::string(info.test_suite_name()) + "." + info.name();
+        c.passed = !result.Failed();
+        c.comparisons = take_pending();
+        // Capture problems are reported, never allowed to stop the test run.
+        try {
+            if (!c.comparisons.empty() && (all_ || !c.passed)) {
+                c.failure = failure_text(result);
+                write_bundle(root_, c);
+            } else {
+                remove_bundle(root_, c.name);  // so an earlier run's failure doesn't linger
+            }
+        } catch (const std::exception& e) {
+            std::fprintf(stderr, "tensorscope: could not update the bundle for %s: %s\n",
+                         c.name.c_str(), e.what());
         }
     }
 
@@ -53,21 +64,26 @@ class CaptureListener : public ::testing::EmptyTestEventListener {
 
 }  // namespace detail
 
-// Registers the listener that writes bundles. Call once from main after InitGoogleTest.
-// No-op unless TENSORSCOPE_CAPTURE_DIR is set; TENSORSCOPE_CAPTURE_ALL also writes passing cases.
+// Registers the listener that writes bundles. Call from main after InitGoogleTest; later calls do
+// nothing. No-op unless TENSORSCOPE_CAPTURE_DIR is set; TENSORSCOPE_CAPTURE_ALL=1 also writes
+// passing cases.
 inline void install() {
+    static bool installed = false;
+    if (installed) return;
     if (!enabled()) {
         std::fprintf(stderr,
                      "note: TENSORSCOPE_CAPTURE_DIR is not set; nothing will be captured\n");
         return;
     }
-    const bool all = std::getenv("TENSORSCOPE_CAPTURE_ALL") != nullptr;
+    installed = true;
+    const bool all = capture_all();
     ::testing::UnitTest::GetInstance()->listeners().Append(
         new detail::CaptureListener(std::filesystem::absolute(capture_dir()), all));
     std::fprintf(stderr, "note: capturing %s cases to %s\n", all ? "all" : "failing",
                  capture_dir());
 }
 
+}  // namespace v1
 }  // namespace tensorscope
 
 #endif  // TENSORSCOPE_GTEST_HPP

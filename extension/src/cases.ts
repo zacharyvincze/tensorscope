@@ -32,6 +32,9 @@ function split(name: string): [string, string] {
 }
 
 const key = (e: Entry) => `${e.case.name}#${e.comparison}`;
+// Names comparison k within its case: its label, else its index when the case has several.
+const tag = (c: Case, k: number) =>
+    c.comparisons[k].label ? ` [${c.comparisons[k].label}]` : c.comparisons.length > 1 ? ` [${k}]` : "";
 
 export class Capture {
     entries: Entry[] = [];
@@ -39,6 +42,9 @@ export class Capture {
     current = -1;            // entry shown in the panel
     private currentKey = ""; // the same entry across reloads, which renumber entries
     reload: () => Thenable<void> = async () => {};
+    // The page's pane arrangement and hidden panes, as it last reported them.
+    layout: { layout: string; hidden: string[] } = { layout: "grid", hidden: [] };
+    onLayout?: () => void;
 
     constructor(readonly root: string, readonly label: string, readonly panel: vscode.WebviewPanel) {}
 
@@ -176,14 +182,14 @@ export class CasesView implements vscode.TreeDataProvider<Node>, vscode.Disposab
             return item;
         }
         const c = node.case, cmp = c.comparisons[node.comparison];
-        const label = node.leaf + (c.comparisons.length > 1 ? ` [${node.comparison}]` : "");
+        const label = node.leaf + tag(c, node.comparison);
         const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
         item.id = `entry:${key(node)}`;
         item.iconPath = icon(c.passed);
         const counted = cmp.failed !== undefined;
         item.description = c.passed || !counted ? undefined : `${cmp.failed}/${cmp.compared}`;
         const tip = new vscode.MarkdownString();
-        tip.appendMarkdown(`**${c.name}**${c.comparisons.length > 1 ? ` [${node.comparison}]` : ""}\n\n`);
+        tip.appendMarkdown(`**${c.name}**${tag(c, node.comparison)}\n\n`);
         tip.appendMarkdown(`${cmp.kind} · ` + (counted
             ? `${cmp.failed} of ${cmp.compared} compared elements failed`
             : "no per-element verdict"));

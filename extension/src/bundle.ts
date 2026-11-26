@@ -1,6 +1,5 @@
-// Reads capture bundles (spec/format.md) for the page. Field names match the entries that
-// viewer/src/tensorscope_viewer/html_export.py embeds, since both feed the same html_viewer.html;
-// here the page gets entryMeta() up front and entryArrays() for a case only when it shows it.
+// Reads capture bundles (spec/format.md) for the page, media/html_viewer.html. The page gets
+// entryMeta() for every comparison up front and entryArrays() for one only when it shows it.
 
 import * as fs from "fs/promises";
 import * as path from "path";
@@ -10,6 +9,7 @@ export const VERSION = 1;
 
 interface ComparisonEntry {
     kind: string;
+    label?: string;  // optional name for the comparison within its case
     axes: string[];
     compared?: number;  // present, like failed, exactly when status is
     failed?: number;
@@ -30,7 +30,7 @@ interface Npy {
     data: Buffer;
 }
 
-// NumPy dtype names, as html_export.py reports them via str(dtype).
+// NumPy dtype names, as str(dtype) gives them.
 const DTYPE_NAMES: Record<string, string> = {
     b1: "bool", u1: "uint8", i1: "int8", u2: "uint16", i2: "int16", u4: "uint32", i4: "int32",
     u8: "uint64", i8: "int64", f2: "float16", f4: "float32", f8: "float64",
@@ -157,6 +157,7 @@ export function entryMeta(c: Case, k: number): object {
         case: c.name,
         index: k,
         count: c.comparisons.length,
+        label: e.label,
         passed: c.passed,
         failure: c.failure,
         kind: e.kind,

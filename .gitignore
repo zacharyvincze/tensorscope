@@ -8,12 +8,8 @@ out/
 dist/
 *.vsix
 
-# Python
-__pycache__/
-*.pyc
-.venv/
-uv.lock
-
 # Capture output
 *.npy
-viewer.html
+
+# Cache
+.cache/

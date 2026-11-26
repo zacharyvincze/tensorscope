@@ -1,10 +1,6 @@
-// The page template lives with the Python viewer so both readers serve the same page.
+// vsce packages only files under the extension directory, so the repo's LICENSE is copied in.
 const fs = require("fs");
 const path = require("path");
 
 const ext = path.join(__dirname, "..");
-const repo = path.join(ext, "..");
-fs.mkdirSync(path.join(ext, "media"), { recursive: true });
-fs.copyFileSync(path.join(repo, "viewer/src/tensorscope_viewer/html_viewer.html"),
-                path.join(ext, "media/html_viewer.html"));
-fs.copyFileSync(path.join(repo, "LICENSE"), path.join(ext, "LICENSE"));
+fs.copyFileSync(path.join(ext, "..", "LICENSE"), path.join(ext, "LICENSE"));

@@ -81,6 +81,24 @@
         "title": "Open Manifest",
         "category": "Tensorscope",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "tensorscope.fit",
+        "title": "Fit to Pane",
+        "category": "Tensorscope",
+        "icon": "$(screen-full)"
+      },
+      {
+        "command": "tensorscope.layout",
+        "title": "Layout\u2026",
+        "category": "Tensorscope",
+        "icon": "$(layout)"
+      },
+      {
+        "command": "tensorscope.shortcuts",
+        "title": "Keyboard Shortcuts",
+        "category": "Tensorscope",
+        "icon": "$(keyboard)"
       }
     ],
     "menus": {
@@ -150,6 +168,45 @@
         {
           "command": "tensorscope.openManifest",
           "when": "tensorscope.hasCapture"
+        },
+        {
+          "command": "tensorscope.fit",
+          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture"
+        },
+        {
+          "command": "tensorscope.layout",
+          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture"
+        },
+        {
+          "command": "tensorscope.shortcuts",
+          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "tensorscope.copyFilter",
+          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tensorscope.fit",
+          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture",
+          "group": "navigation@2"
+        },
+        {
+          "command": "tensorscope.layout",
+          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture",
+          "group": "navigation@3"
+        },
+        {
+          "command": "tensorscope.shortcuts",
+          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture",
+          "group": "1_view@1"
+        },
+        {
+          "command": "tensorscope.reload",
+          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture",
+          "group": "1_view@2"
         }
       ]
     }

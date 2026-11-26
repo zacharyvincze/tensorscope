@@ -8,12 +8,11 @@ Built for one team's workflow, not as a general-purpose product. The main consum
 
 ## Structure
 
-Three parts, joined only by the bundle format:
+A writer and a reader, joined only by the bundle format:
 
 | path | part | role |
 |---|---|---|
 | `include/tensorscope/` | capture library | Header-only C++17. Writes bundles. CMake target `tensorscope::capture`. |
-| `viewer/` | HTML generator | Python CLI (run with `uv`). Turns a capture directory into one self-contained HTML file. |
 | `extension/` | VS Code extension | TypeScript. Opens capture directories directly in a webview. |
 | `spec/format.md` | bundle format | The contract between writer and readers. |
 
@@ -25,19 +24,16 @@ Three parts, joined only by the bundle format:
 
 The library knows nothing about the code under test. Keep it that way: it holds dense row-major arrays, per-element verdicts, and the bundle writer.
 
-- **Core header**: arrays, `Comparison`, `Recording`, NPY and manifest writing. Standard library only.
+- **Core header**: `Capture` (the only way to build a comparison), the read-only `Comparison` and `Array` it produces, the case queue, NPY and manifest writing. Standard library only. Everything sits in `inline namespace v1`.
+- **Tests**: `tests/` (GoogleTest, `-DTENSORSCOPE_BUILD_TESTS=ON`) pins down the library's behaviour; a change to the API comes with a test.
 - **GoogleTest header**: the listener that collects comparisons per test case and writes a bundle when a case ends. Separate from the core so the core carries no GTest dependency.
 - **Adapter (lives in the consumer)**: maps the consumer's own tensor descriptors onto canonical arrays, and its comparators feed each element's verdict to the recording's observer. The status mask is the comparator's verdict, never recomputed.
 
 Consumers fetch the library with `FetchContent` behind an opt-in build option, so default and release builds of the consumer never see it. Runtime capture is enabled by `TENSORSCOPE_CAPTURE_DIR`; `TENSORSCOPE_CAPTURE_ALL=1` also writes passing cases.
 
-### Viewer
-
-The generated HTML is one file with gzipped data embedded, no server, and no network access, so it opens from VS Code Live Preview, a port-forwarded browser, or a downloaded copy. `viewer/src/tensorscope_viewer/html_viewer.html` is the page template for both readers; the extension's build copies it into `extension/media/`.
-
 ### Extension
 
-`extension/src/bundle.ts` produces the same entry fields as `html_export.py`, so the shared page sees identical data from either reader. A change to the entry fields changes both. The Python viewer embeds every array; the extension sends the page only the metadata up front and each case's arrays on request, so opening cost doesn't grow with capture size. Inside the extension the page runs in hosted mode (it detects `acquireVsCodeApi`): its case list is replaced by the native Cases view (`extension/src/cases.ts`), and the two talk over `postMessage`. Opened standalone, the page must keep working with no host. The extension runs on the workspace side so it reads captures on a Remote-SSH host. Its build has to work on Node 18, which is why `@vscode/vsce` is pinned to 2.x and `cheerio` is overridden in `package.json`.
+The extension is the only reader. `extension/media/html_viewer.html` is the page it shows in a webview; `extension/src/bundle.ts` reads bundles into the page's entries. The extension sends the page only the metadata up front and each case's arrays on request, so opening cost doesn't grow with capture size. The page only runs inside the extension's webview: case selection lives in the native Cases view (`extension/src/cases.ts`), the editor tab's title bar holds the page's buttons, and the page and extension talk over `postMessage`. The extension runs on the workspace side so it reads captures on a Remote-SSH host. Its build has to work on Node 18, which is why `@vscode/vsce` is pinned to 2.x and `cheerio` is overridden in `package.json`.
 
 ## Conventions
 

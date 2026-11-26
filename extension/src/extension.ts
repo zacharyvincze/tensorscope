@@ -50,7 +50,57 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand("tensorscope.openManifest", (node?: Node) => {
             const e = entryOf(node);
             if (e) vscode.window.showTextDocument(vscode.Uri.file(path.join(e.case.dir, "manifest.json")));
-        }));
+        }),
+        vscode.commands.registerCommand("tensorscope.fit", () => command(cases.active, { name: "fit" })),
+        vscode.commands.registerCommand("tensorscope.shortcuts", () => command(cases.active, { name: "keys" })),
+        vscode.commands.registerCommand("tensorscope.layout", () => cases.active && pickLayout(cases.active)));
+}
+
+// Runs one of the page's own actions; the page applies it as if its in-page control were used.
+function command(capture: Capture | undefined, m: { name: string; [k: string]: unknown }): void {
+    capture?.panel.webview.postMessage({ type: "command", ...m });
+}
+
+const PANES: [string, string][] = [["ref", "Reference"], ["act", "Actual"], ["diff", "|actual − reference|"], ["status", "Status"]];
+type LayoutItem = vscode.QuickPickItem & { action?: { name: string; [k: string]: unknown } };
+
+// The layout menu: stays open so several changes can be made, and redraws as the page reports them.
+function pickLayout(capture: Capture): void {
+    const qp = vscode.window.createQuickPick<LayoutItem>();
+    qp.title = "Tensorscope: Layout";
+    qp.placeholder = "Arrange the panes, or show and hide them";
+    const sep = (label: string): LayoutItem => ({ label, kind: vscode.QuickPickItemKind.Separator });
+    const render = () => {
+        const { layout, hidden } = capture.layout;
+        const at = qp.activeItems.length ? qp.items.indexOf(qp.activeItems[0]) : -1;
+        qp.items = [
+            sep("Arrangement"),
+            ...["grid", "row", "column"].map((l): LayoutItem => ({
+                label: `$(${l === layout ? "check" : "blank"}) ${l[0].toUpperCase() + l.slice(1)}`,
+                action: { name: "layout", value: l },
+            })),
+            sep("Panes"),
+            ...PANES.map(([key, title]): LayoutItem => {
+                const shown = !hidden.includes(key);
+                return { label: `$(${shown ? "eye" : "eye-closed"}) ${title}`, description: shown ? "" : "hidden",
+                         action: { name: "pane", key, shown: !shown } };
+            }),
+            sep(""),
+            { label: "$(discard) Reset Layout", description: "default order, sizes and panes", action: { name: "reset" } },
+        ];
+        if (at >= 0) qp.activeItems = [qp.items[at]];
+    };
+    render();
+    capture.onLayout = render;
+    qp.onDidAccept(() => {
+        const a = qp.selectedItems[0]?.action;
+        if (a) command(capture, a);
+    });
+    qp.onDidHide(() => {
+        if (capture.onLayout === render) capture.onLayout = undefined;
+        qp.dispose();
+    });
+    qp.show();
 }
 
 async function open(context: vscode.ExtensionContext, root: string): Promise<void> {
@@ -93,6 +143,9 @@ async function open(context: vscode.ExtensionContext, root: string): Promise<voi
             reply.then(
                 (data) => panel.webview.postMessage({ type: "arrays", id: m.id, ...data }),
                 (err) => panel.webview.postMessage({ type: "arrays", id: m.id, error: String(err.message ?? err) }));
+        } else if (m.type === "layout") {
+            capture.layout = { layout: m.layout, hidden: m.hidden };
+            capture.onLayout?.();
         } else if (m.type === "focusCases") {
             vscode.commands.executeCommand("tensorscope.cases.focus");
         }

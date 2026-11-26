@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <title>tensorscope</title>
 <style>
-  /* In a VS Code webview the --vscode-* theme variables are defined and the page follows the editor
-     theme; opened standalone, every variable falls back to the built-in dark palette. */
+  /* The page follows the editor theme through VS Code's --vscode-* variables; the fallbacks are a
+     dark palette for a theme that leaves one undefined. */
   :root {
     color-scheme:dark;
     --bg:var(--vscode-editor-background, #0d1117); --panel:var(--vscode-sideBar-background, #161b22);
@@ -16,7 +16,6 @@
     --skip:var(--vscode-testing-iconSkipped, #30363d);
     --within:var(--vscode-descriptionForeground, #8b949e); --over:var(--vscode-charts-orange, #d18616);
     --hover:var(--vscode-list-hoverBackground, #1f2630);
-    --sel-bg:var(--vscode-list-activeSelectionBackground, #1f6feb44); --sel-fg:var(--vscode-list-activeSelectionForeground, inherit);
     --sash:var(--vscode-sash-hoverBorder, #1f6feb66);
     --input-bg:var(--vscode-input-background, var(--bg)); --input-fg:var(--vscode-input-foreground, var(--fg));
     --input-border:var(--vscode-input-border, var(--border));
@@ -31,11 +30,11 @@
     --kbd-border:var(--vscode-keybindingLabel-border, var(--border)); --kbd-bottom:var(--vscode-keybindingLabel-bottomBorder, var(--border));
     --font:var(--vscode-font-family, ui-sans-serif, system-ui, sans-serif); --font-size:var(--vscode-font-size, 13px);
     --mono:var(--vscode-editor-font-family, ui-monospace, monospace);
-    --radius:6px; --radius-sm:4px; --filter-pad:6px 8px; --filter-radius:6px; --range-border:var(--border);
+    --radius:6px; --radius-sm:4px; --range-border:var(--border);
   }
   body.vscode-light { color-scheme:light; }
   /* VS Code's own controls are flat and square-cornered. */
-  body[data-vscode-theme-kind] { --radius:0; --radius-sm:2px; --filter-pad:4px 6px; --filter-radius:2px; --range-border:transparent; }
+  body[data-vscode-theme-kind] { --radius:0; --radius-sm:2px; --range-border:transparent; }
   * { box-sizing: border-box; scrollbar-width:thin; scrollbar-color:var(--scroll) transparent; }
   ::-webkit-scrollbar { width:10px; height:10px; }
   ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background:transparent; }
@@ -53,47 +52,43 @@
   .gutter { flex:0 0 5px; cursor:col-resize; background:linear-gradient(var(--border),var(--border)) center/1px 100% no-repeat; }
   .gutter:hover, .ggut:hover { background-color:var(--sash); }
 
-  #side { width:420px; display:flex; flex-direction:column; background:var(--panel); min-width:0; }
-  #side-top { display:flex; align-items:center; gap:8px; padding:8px; }
-  #filter { flex:1; min-width:0; padding:var(--filter-pad); background:var(--input-bg); color:var(--input-fg); border:1px solid var(--input-border); border-radius:var(--filter-radius); }
-  #filter:focus { outline:none; border-color:var(--accent); }
-  .chk { display:flex; align-items:center; gap:4px; white-space:nowrap; font-size:12px; color:var(--dim); cursor:pointer; }
-  #counts { padding:0 10px 6px; color:var(--dim); font-size:12px; }
-  #list { flex:1; overflow:auto; font:12px var(--mono); }
-  #list div { padding:3px 10px; white-space:nowrap; cursor:pointer; }
-  #list div:hover { background:var(--hover); }
-  #list div.sel { background:var(--sel-bg); color:var(--sel-fg); box-shadow:inset 2px 0 var(--accent); }
-  #list .n { display:inline-block; width:92px; text-align:right; margin-right:8px; color:var(--fail); }
-  #list .n.ok { color:var(--pass); }
-  #list .fx { color:var(--dim); }
-  #list .empty { color:var(--dim); cursor:default; }
-
   #main { flex:1; display:flex; flex-direction:column; min-width:0; }
   #head { padding:8px 12px; border-bottom:1px solid var(--border); }
-  #title-row { display:flex; align-items:flex-start; gap:10px; }
-  #title { flex:1; font-weight:600; word-break:break-all; }
-  #meta { color:var(--dim); font-size:12px; }
-  #controls { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; padding:6px 12px; border-bottom:1px solid var(--border); font-size:12px; }
-  #controls label { display:flex; gap:6px; align-items:center; }
-  #controls input[type=range] { accent-color:var(--accent); background:var(--dd-bg); border:1px solid var(--range-border); border-radius:var(--radius-sm); }
+  #title { font-weight:600; word-break:break-all; }
+  #sub { display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; margin-top:2px; font-size:12px; }
+  #sub label, #sliders { display:flex; gap:6px; align-items:center; }
+  #sliders { gap:14px; }
+  #sliders:empty { display:none; }
+  #sliders input[type=range] { width:120px; }
+  #meta { color:var(--dim); }
+  input[type=range] { accent-color:var(--accent); background:var(--dd-bg); border:1px solid var(--range-border); border-radius:var(--radius-sm); }
   input[type=checkbox] { accent-color:var(--accent); }
-  #controls .sep { width:1px; align-self:stretch; background:var(--border); }
-  #levels { display:flex; gap:8px; align-items:center; }
-  #levels input[type=range] { width:90px; }
-  #thresh { display:flex; gap:6px; align-items:center; }
-  #thresh input[type=range] { width:110px; }
-  #thresh input[type=number], #levels input[type=number] { width:78px; padding:0 4px; background:var(--input-bg); color:var(--input-fg); border:1px solid var(--input-border); border-radius:var(--radius-sm); }
-  #lv-auto.on { color:var(--accent); border-color:var(--accent); }
-  #pane-toggles { display:flex; gap:4px; align-items:center; }
-  #pane-toggles button:not(.on) { color:var(--dim); text-decoration:line-through; }
-  #pane-toggles button.on { border-color:var(--vscode-focusBorder, #1f6feb99); }
+  input[type=number] { width:78px; padding:0 4px; background:var(--input-bg); color:var(--input-fg); border:1px solid var(--input-border); border-radius:var(--radius-sm); }
+  .on { color:var(--accent); border-color:var(--accent); }
+
+  /* Settings that belong to one pane open from a chip in its header. */
+  .chip { border-color:transparent; background:none; color:var(--fg); padding:0 4px; font:11px var(--mono); }
+  .chip:hover { background:var(--hover); }
+  .chip .auto { color:var(--dim); margin-left:4px; }
+  .pop { position:fixed; z-index:15; display:grid; gap:8px; padding:10px 12px; font-size:12px; background:var(--widget-bg); border:1px solid var(--widget-border); border-radius:var(--radius-sm); box-shadow:0 4px 12px var(--shadow); }
+  .pop[hidden] { display:none; }
+  .pop label, .pop .row { display:flex; gap:6px; align-items:center; }
+  .pop .key { width:52px; color:var(--dim); }
+  .pop input[type=range] { width:140px; }
+  .pop .note { max-width:260px; color:var(--dim); }
+  .seg { display:flex; }
+  .seg button { border-radius:0; }
+  .seg button:first-child { border-radius:var(--radius-sm) 0 0 var(--radius-sm); }
+  .seg button:last-child { border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
+  .seg button + button { margin-left:-1px; }
+  .seg button.on { position:relative; }
 
   #body { flex:1; display:flex; min-height:0; }
   #grid { flex:1; position:relative; display:grid; gap:6px; padding:6px; min-width:0; min-height:0; }
   .ggut { position:absolute; z-index:5; border-radius:3px; }
   .ggut.col { top:6px; bottom:6px; width:6px; cursor:col-resize; }
   .ggut.row { left:6px; right:6px; height:6px; cursor:row-resize; }
-  .pane { display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; background:var(--canvas); border:1px solid var(--border); border-radius:var(--radius); }
+  .pane { position:relative; display:flex;flex-direction:column; min-width:0; min-height:0; overflow:hidden; background:var(--canvas); border:1px solid var(--border); border-radius:var(--radius); }
   .pane.drop { outline:2px dashed var(--accent); outline-offset:-2px; }
   .pane.moving { opacity:.4; }
   .phead { display:flex; align-items:center; gap:8px; padding:3px 4px 3px 8px; background:var(--panel); border-bottom:1px solid var(--border); font-size:11px; color:var(--dim); white-space:nowrap; overflow:hidden; cursor:grab; user-select:none; }
@@ -107,6 +102,10 @@
   .view { flex:1; position:relative; overflow:auto; min-height:0; }
   .view canvas { display:block; image-rendering:pixelated; cursor:crosshair; }
   .view.dragging, .view.dragging canvas { cursor:grabbing; }
+  /* Zoom readout, shown on the first pane only since every pane shares the zoom. */
+  .zoomv { position:absolute; right:14px; bottom:14px; z-index:3; display:none; padding:0 6px; font:11px var(--mono); color:var(--dim); background:var(--widget-bg); border-color:var(--widget-border); opacity:.85; }
+  .zoomv:hover { color:var(--fg); opacity:1; }
+  .pane.first .zoomv { display:block; }
   .mark { position:absolute; display:none; pointer-events:none; z-index:2; border:1px solid #fff; box-shadow:0 0 0 1px #000, inset 0 0 0 1px #000; }
   .mark.pinned { border:2px solid var(--pin); }
 
@@ -129,46 +128,28 @@
   #keys td:first-child { text-align:right; white-space:nowrap; }
   #toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:30; max-width:80vw; padding:6px 12px; background:var(--widget-bg); border:1px solid var(--widget-border); border-radius:var(--radius-sm); box-shadow:0 4px 12px var(--shadow); opacity:0; transition:opacity .2s; pointer-events:none; word-break:break-all; }
   #toast.show { opacity:1; }
-
-  /* In the VS Code extension the case list is a native sidebar view, so the page drops its own. */
-  body.hosted #side, body.hosted .gutter[data-resize="side"], body.hosted .standalone-only { display:none; }
-  body:not(.hosted) .hosted-only { display:none; }
 </style>
 </head>
 <body>
-<div id="side">
-  <div id="side-top">
-    <input id="filter" placeholder="filter cases (substring, or * glob)   /">
-    <label class="chk"><input type="checkbox" id="failonly"> failing only</label>
-  </div>
-  <div id="counts"></div>
-  <div id="list"></div>
-</div>
-<div class="gutter" data-resize="side" title="drag to resize"></div>
 <div id="main">
   <div id="head">
-    <div id="title-row"><div id="title"></div><button id="copy" title="copy --gtest_filter for this case (c)">copy filter</button></div>
-    <div id="meta"></div>
+    <div id="title"></div>
+    <div id="sub">
+      <span id="sliders"></span>
+      <label id="channel-ctl">channel <select id="channel"></select></label>
+      <span id="meta"></span>
+    </div>
   </div>
-  <div id="controls">
-    <span id="sliders"></span>
-    <label>channel <select id="channel"></select></label>
-    <span id="thresh" style="display:none" title="the bundle has no per-element verdict; this marks elements whose |actual − reference| exceeds the threshold">|diff| &gt;
-      <input id="th-r" type="range" min="0" max="1000" value="0"><input id="th" type="number" step="any" min="0" value="0"></span>
-    <label id="outside-ctl">outside ROI <select id="outside"><option value="dim">dim</option><option value="hide">hide</option><option value="show">show</option></select></label>
-    <span id="levels">display
-      <label title="value shown as black">min <input id="lv-lo-r" type="range"><input id="lv-lo" type="number" step="any"></label>
-      <label title="value shown as white">max <input id="lv-hi-r" type="range"><input id="lv-hi" type="number" step="any"></label>
-      <button id="lv-auto" title="8-bit data: full type range; float data: compared elements of the current slice (a)">auto</button>
-    </span>
-    <label>zoom <input id="zoom" type="range" min="1" max="128" value="8"> <span id="zoomv"></span></label>
-    <button id="fit" title="fit image to pane (f)">fit</button>
-    <span class="sep"></span>
-    <label>layout <select id="layout"><option value="grid">grid</option><option value="row">row</option><option value="column">column</option></select></label>
-    <span id="pane-toggles"></span>
-    <button id="reset" title="restore the default pane order, sizes and visibility">reset layout</button>
-    <span class="sep"></span>
-    <button id="keys-btn" title="keyboard shortcuts (?)">? shortcuts</button>
+  <div id="lv-pop" class="pop" hidden>
+    <label title="value shown as black"><span class="key">min</span><input id="lv-lo-r" type="range"><input id="lv-lo" type="number" step="any"></label>
+    <label title="value shown as white"><span class="key">max</span><input id="lv-hi-r" type="range"><input id="lv-hi" type="number" step="any"></label>
+    <div class="row"><span class="key"></span><button id="lv-auto" title="8-bit data: full type range; float data: compared elements of the current slice (a)">auto</button></div>
+    <label id="outside-ctl" title="how reference and actual draw elements the comparator did not check"><span class="key">outside</span>
+      <span class="seg" id="outside"><button data-v="dim">dim</button><button data-v="hide">hide</button><button data-v="show">show</button></span></label>
+  </div>
+  <div id="th-pop" class="pop" hidden>
+    <label><span class="key">|diff| &gt;</span><input id="th-r" type="range" min="0" max="1000" value="0"><input id="th" type="number" step="any" min="0" value="0"></label>
+    <div class="note">This bundle has no per-element verdict. The viewer marks elements over this threshold; it is not the test's result.</div>
   </div>
   <div id="body">
     <div id="grid"></div>
@@ -182,27 +163,27 @@
     <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>previous / next case</td></tr>
     <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>step the innermost leading axis (depth, else batch); with <kbd>Shift</kbd>, the outermost</td></tr>
     <tr><td><kbd>n</kbd> <kbd>N</kbd></td><td>jump to next / previous failing (or over-threshold) element, across slices</td></tr>
-    <tr><td><kbd>f</kbd></td><td>fit zoom to pane</td></tr>
+    <tr><td><kbd>f</kbd></td><td>fit zoom to pane (or click the zoom readout)</td></tr>
     <tr><td><kbd>+</kbd> <kbd>−</kbd></td><td>zoom in / out (wheel zooms about the cursor)</td></tr>
     <tr><td><kbd>a</kbd></td><td>reset display min/max to auto</td></tr>
     <tr><td><kbd>c</kbd></td><td>copy <code>--gtest_filter</code> for this case</td></tr>
-    <tr class="standalone-only"><td><kbd>/</kbd></td><td>focus the case filter (<kbd>Enter</kbd> opens the first match)</td></tr>
-    <tr class="hosted-only"><td><kbd>/</kbd></td><td>focus the Cases view (type there to filter)</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>close this · restore a maximized pane · unpin pixel</td></tr>
+    <tr><td><kbd>/</kbd></td><td>focus the Cases view (type there to filter)</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>close this or a popup · restore a maximized pane · unpin pixel</td></tr>
     <tr><td>click</td><td>pin / unpin the pixel under the cursor</td></tr>
     <tr><td>drag image</td><td>pan (all panes linked)</td></tr>
+    <tr><td>pane header values</td><td>click to adjust: display range (reference, actual), threshold (status, when the bundle has no verdict)</td></tr>
     <tr><td>drag pane header</td><td>swap with another pane; double-click to maximize</td></tr>
-    <tr><td>drag gutters</td><td>resize panes, case list and info panel</td></tr>
+    <tr><td>drag gutters</td><td>resize panes and the info panel</td></tr>
   </table>
 </div></div>
 <div id="toast"></div>
 <script id="data" type="application/json">/*__TENSORSCOPE_DATA__*/[]</script>
 <script>
 "use strict";
+// The case index; the extension fills it in and sends each case's arrays when the page asks.
 const ENTRIES = JSON.parse(document.getElementById("data").textContent);
-// Set when running inside the VS Code extension, which owns case selection; null when standalone.
-const host = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : null;
-if (host) document.body.classList.add("hosted");
+// The extension owns case selection, through its Cases view.
+const host = acquireVsCodeApi();
 const $ = (id) => document.getElementById(id);
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const INFERNO = [[0,0,4],[31,12,72],[85,15,109],[136,34,106],[186,54,85],[227,89,51],[249,140,10],[249,201,50],[252,255,164]];
@@ -214,20 +195,10 @@ const STATUS_CLS = ["skip", "pass", "FAIL"];
 // colours of its own so it can't be mistaken for the test's verdict. [0] is unused.
 const THRESH_RGB = [[0,0,0],[139,148,158],[209,134,22]];  // follow the theme, see readTheme()
 const PANES = { ref: "reference", act: "actual", diff: "|actual − reference|", status: "status" };
-const SHORT = { ref: "ref", act: "actual", diff: "diff", status: "status" };
 const KEYS = Object.keys(PANES);
-const GAP = 6, MIN_PANE = 80;
+const GAP = 6, MIN_PANE = 80, ZOOM_MIN = 1, ZOOM_MAX = 128;
 
-// Arrays are gzip + base64; inflated only when their case is first opened.
-async function unpack(s) {
-  const bin = atob(s), u = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; ++i) u[i] = bin.charCodeAt(i);
-  return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
-}
-async function typed([t, s]) { const b = await unpack(s); return t === "f8" ? new Float64Array(b) : new Float32Array(b); }
-
-// Arrays come embedded (standalone HTML) or, in the extension, from the host on request: the
-// page then starts with only the case index, so opening a large capture costs nothing up front.
+// Arrays come from the extension on request, so opening a large capture costs nothing up front.
 const pending = new Map();
 let requestSeq = 0;
 function request(index) {
@@ -238,8 +209,6 @@ function request(index) {
   });
 }
 async function arrays(e, i) {
-  if (e.ref) return { ref: await typed(e.ref), act: await typed(e.act),
-                      diff: e.diff && new Float32Array(await unpack(e.diff)), status: e.status && new Uint8Array(await unpack(e.status)) };
   const a = await request(i), vals = ([t, b]) => t === "f8" ? new Float64Array(b) : new Float32Array(b);
   e.shape = a.shape;
   e.dtypes = a.dtypes;
@@ -309,7 +278,7 @@ function applyThreshold(v) {
 
 // ---- persisted layout preferences --------------------------------------------
 const STORE = "tensorscope";
-const prefs = Object.assign({ order: KEYS.slice(), hidden: [], layout: "grid", fr: {}, side: 420, info: 320, failOnly: false, outside: "dim" },
+const prefs = Object.assign({ order: KEYS.slice(), hidden: [], layout: "grid", fr: {}, info: 320, outside: "dim" },
                             (() => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch { return {}; } })());
 if (prefs.order.length !== KEYS.length || !KEYS.every(k => prefs.order.includes(k))) prefs.order = KEYS.slice();
 prefs.hidden = prefs.hidden.filter(k => KEYS.includes(k));
@@ -317,7 +286,7 @@ if (prefs.hidden.length === KEYS.length) prefs.hidden = [];
 function save() { try { localStorage.setItem(STORE, JSON.stringify(prefs)); } catch { /* storage unavailable */ } }
 
 // ---- state -------------------------------------------------------------------
-let visible = [], current = -1, view = null, lead = [], hover = null, pinned = false, channelChoice = null;
+let failOnly = false, visible = [], current = -1, view = null, lead = [], hover = null, pinned = false, channelChoice = null;
 let zoom = 8, maximized = null, levels = null;  // levels: manual [lo, hi], or null for auto
 
 // ---- pane grid -----------------------------------------------------------------
@@ -325,16 +294,16 @@ const grid = $("grid");
 for (const k of KEYS) {
   const extra = k === "diff" ? `<span class="cbar"></span><span id="diff-peak"></span>`
               : k === "status" ? `<span id="status-legend"></span> <span id="status-count"></span>`
-              : "";
+              : `<button class="chip lv-chip" data-act="levels" title="display range: values shown as black … white · click to adjust"></button>`;
   grid.insertAdjacentHTML("beforeend",
     `<div class="pane" data-pane="${k}">` +
     `<div class="phead" draggable="true" title="drag onto another pane to swap · double-click to maximize">` +
     `<span class="grip">⋮⋮</span><span class="ptitle">${PANES[k]}</span><span class="pextra">${extra}</span>` +
     `<button class="pbtn" data-act="max" title="maximize / restore">⤢</button><button class="pbtn" data-act="hide" title="hide pane">×</button></div>` +
-    `<div class="view"><canvas id="c-${k}"></canvas><div class="mark"></div></div></div>`);
+    `<div class="view"><canvas id="c-${k}"></canvas><div class="mark"></div></div>` +
+    `<button class="zoomv" title="click to fit (f) · wheel or + / − to zoom"></button></div>`);
 }
 document.querySelector(".cbar").style.background = `linear-gradient(to right, ${INFERNO.map(c => `rgb(${c})`).join(",")})`;
-$("pane-toggles").innerHTML = "panes " + KEYS.map(k => `<button data-pane="${k}" title="show / hide">${SHORT[k]}</button>`).join("");
 const paneEl = (k) => grid.querySelector(`.pane[data-pane="${k}"]`);
 const views = [...grid.querySelectorAll(".view")];
 
@@ -364,8 +333,8 @@ function renderStatusHead(v) {
     "drag onto another pane to swap · double-click to maximize";
   $("status-legend").innerHTML = v.verdict
     ? `${sw("var(--skip)")} not compared ${sw(`rgb(${STATUS_RGB[1]})`)} pass ${sw(`rgb(${STATUS_RGB[2]})`)} fail`
-    : `${sw("var(--within)")} ≤ ${fmt(threshold)} ${sw("var(--over)")} over`;
-  $("thresh").style.display = v.verdict ? "none" : "";
+    : `${sw("var(--within)")} ≤ <button class="chip" data-act="thresh" title="viewer-side threshold, not the test's verdict · click to adjust">${fmtShort(threshold)}</button> ${sw("var(--over)")} over`;
+  if (v.verdict) $("th-pop").hidden = true;
   $("outside-ctl").style.display = v.verdict ? "" : "none";
 }
 
@@ -433,9 +402,19 @@ function layoutGrid() {
     el.style.order = i;
     el.querySelector('[data-act="max"]').textContent = maximized === k ? "⤡" : "⤢";
   }
-  for (const b of $("pane-toggles").querySelectorAll("button")) b.classList.toggle("on", !prefs.hidden.includes(b.dataset.pane));
+  for (const k of KEYS) paneEl(k).classList.toggle("first", k === shown[0]);
+  reportLayout();
   positionGutters();
   placeMarks();
+}
+
+// The extension's layout picker shows the arrangement and hidden panes; sent only on change.
+let reportedLayout = "";
+function reportLayout() {
+  const state = { layout: prefs.layout, hidden: prefs.hidden.slice() }, key = JSON.stringify(state);
+  if (key === reportedLayout) return;
+  reportedLayout = key;
+  host.postMessage({ type: "layout", ...state });
 }
 
 // Splitters sit in the grid gaps; each moves the boundary between two adjacent tracks.
@@ -487,16 +466,30 @@ grid.addEventListener("mousedown", (ev) => {
 for (const g of document.querySelectorAll(".gutter")) g.addEventListener("mousedown", (ev) => {
   if (ev.button !== 0) return;
   ev.preventDefault();
-  const which = g.dataset.resize, el = $(which), w0 = el.getBoundingClientRect().width, x0 = ev.clientX, sign = which === "side" ? 1 : -1;
+  const el = $("info"), w0 = el.getBoundingClientRect().width, x0 = ev.clientX;
   startDrag((e2) => {
-    prefs[which] = Math.round(clamp(w0 + sign * (e2.clientX - x0), 160, window.innerWidth * 0.6));
-    el.style.width = prefs[which] + "px";
+    prefs.info = Math.round(clamp(w0 - (e2.clientX - x0), 160, window.innerWidth * 0.6));
+    el.style.width = prefs.info + "px";
   }, "col-resize");
 });
 
 function toggleMax(k) {
   maximized = maximized === k ? null : k;
   layoutGrid();
+}
+function setLayout(layout) {
+  if (!["grid", "row", "column"].includes(layout)) return;
+  prefs.layout = layout;
+  maximized = null;
+  layoutGrid();
+  save();
+}
+function resetLayout() {
+  Object.assign(prefs, { order: KEYS.slice(), hidden: [], layout: "grid", fr: {} });
+  maximized = null;
+  layoutGrid();
+  save();
+  fitZoom();
 }
 function setHidden(k, hide) {
   if (hide && shownPanes().length === 1 && !prefs.hidden.includes(k) && !maximized) return toast("at least one pane must stay visible");
@@ -526,27 +519,22 @@ for (const k of KEYS) {
   });
   head.addEventListener("dblclick", (ev) => { if (!ev.target.closest("button")) toggleMax(k); });
   head.addEventListener("click", (ev) => {
-    const b = ev.target.closest("button");
-    if (b) b.dataset.act === "max" ? toggleMax(k) : setHidden(k, true);
+    const act = ev.target.closest("button")?.dataset.act;
+    if (act === "max") toggleMax(k);
+    else if (act === "hide") setHidden(k, true);
+    else if (act === "levels") togglePop("lv-pop", ev.target.closest("button"));
+    else if (act === "thresh") togglePop("th-pop", ev.target.closest("button"));
   });
+  el.querySelector(".zoomv").onclick = fitZoom;
 }
 
-// ---- case list -----------------------------------------------------------------
-function renderList() {
-  const q = $("filter").value.trim();
-  const re = q.includes("*") ? new RegExp("^" + q.split("*").map(s => s.replace(/[.+?^${}()|[\]\\/]/g, "\\$&")).join(".*") + "$") : null;
-  visible = ENTRIES.map((e, i) => i).filter(i => {
-    const e = ENTRIES[i];
-    return (!prefs.failOnly || !e.passed) && (re ? re.test(e.case) : e.case.includes(q));
-  });
-  const failing = visible.filter(i => !ENTRIES[i].passed).length;
-  $("counts").innerHTML = `${visible.length} of ${ENTRIES.length} comparisons · <span class="${failing ? "FAIL" : "pass"}">${failing} failing</span>`;
-  $("list").innerHTML = visible.length ? visible.map(i => {
-    const e = ENTRIES[i], tag = e.count > 1 ? ` [${e.index}]` : "";
-    const n = e.passed ? `<span class="n ok">PASS</span>` : `<span class="n">${e.failed == null ? "FAIL" : `${e.failed}/${e.compared}`}</span>`;
-    const [, fixture = "", param = e.case] = e.case.match(/^[^/]*\/([^.]*)\.[^/]*\/(.*)$/) || [];
-    return `<div data-i="${i}" class="${i === current ? "sel" : ""}" title="${e.case}">${n}<span class="fx">${fixture}</span> ${param}${tag}</div>`;
-  }).join("") : `<div class="empty">${ENTRIES.length ? "no cases match" : "no comparisons in this capture"}</div>`;
+// ---- cases -----------------------------------------------------------------------
+// Names a comparison within its case: its label, else its index when the case has several.
+const entryTag = e => e.label ? ` [${e.label}]` : e.count > 1 ? ` [${e.index}]` : "";
+
+// The cases the Cases view lists, in its order; arrow keys and prefetching step through these.
+function filterCases() {
+  visible = ENTRIES.map((e, i) => i).filter(i => !failOnly || !ENTRIES[i].passed);
 }
 
 // target is the latest pick, which may still be loading; keyboard steps go from it, not from the
@@ -572,10 +560,8 @@ async function select(i) {
   if (!v.verdict && v.th !== threshold) applyThreshold(v);  // cached under an older threshold
   current = i;
   view = v;
-  host?.postMessage({ type: "selected", index: i });
-  document.querySelectorAll("#list div").forEach(d => d.classList.toggle("sel", +d.dataset.i === i));
-  document.querySelector(`#list div[data-i="${i}"]`)?.scrollIntoView({ block: "nearest" });
-  $("title").textContent = e.case + (e.count > 1 ? ` [${e.index}]` : "");
+  host.postMessage({ type: "selected", index: i });
+  $("title").textContent = e.case + entryTag(e);
   renderMeta(v);
   renderStatusHead(v);
   if (!v.verdict) syncThreshold(v);
@@ -592,6 +578,7 @@ async function select(i) {
   const opts = (v.rgb ? ["all"] : []).concat(Array.from({ length: v.C }, (_, c) => String(c)));
   $("channel").innerHTML = opts.map(o => `<option value="${o}">${o === "all" ? "all (RGB)" : "c=" + o}</option>`).join("");
   $("channel").value = opts.includes(channelChoice) ? channelChoice : opts[0];
+  $("channel-ctl").style.display = opts.length > 1 ? "" : "none";
   // Same-sized cases keep zoom and scroll, so a pinned pixel can be compared across cases.
   if (!sameSize) fitZoom();
   draw();
@@ -602,8 +589,9 @@ async function select(i) {
 
 function renderSliders() {
   const v = view, leadDims = v.dims.slice(0, -2);
-  $("sliders").innerHTML = leadDims.map((d, k) =>
-    `<label>${v.labels[k] || "·"} <input type="range" min="0" max="${d - 1}" value="${lead[k]}" data-k="${k}" ${d === 1 ? "disabled" : ""}> <span>${lead[k]}/${d - 1}</span></label>`).join("");
+  // Axes of size 1 have nothing to step through, so they get no slider.
+  $("sliders").innerHTML = leadDims.map((d, k) => d === 1 ? "" :
+    `<label>${v.labels[k] || "·"} <input type="range" min="0" max="${d - 1}" value="${lead[k]}" data-k="${k}"> <span>${lead[k]}/${d - 1}</span></label>`).join("");
   $("sliders").querySelectorAll("input").forEach(s => s.oninput = () => { lead[+s.dataset.k] = +s.value; s.nextElementSibling.textContent = `${s.value}/${s.max}`; draw(); });
 }
 
@@ -651,7 +639,7 @@ function draw() {
   const v = view, { W, H } = v, ch = $("channel").value, all = ch === "all";
   const chans = all ? [0, 1, 2] : [+ch];
   $("diff-peak").textContent = `0 … ${fmt(v.peak)}`;
-  const outside = $("outside").value;
+  const outside = prefs.outside;
   const [lo, hi] = levels || v.lim || sliceLimits(v, chans, outside !== "show"), scale = 255 / (hi - lo);
   syncLevels(lo, hi);
   const imgs = KEYS.map(k => {
@@ -690,8 +678,7 @@ function draw() {
 
 // Display size only; the pixels are not re-rendered.
 function applyZoom() {
-  $("zoom").value = zoom;
-  $("zoomv").textContent = zoom + "×";
+  for (const z of document.querySelectorAll(".zoomv")) z.textContent = zoom + "×";
   if (!view) return;
   for (const k of KEYS) {
     const cv = $("c-" + k);
@@ -715,6 +702,8 @@ function syncLevels(lo, hi) {
     $(`lv-${id}`).step = view.lim ? 1 : "any";
   }
   $("lv-auto").classList.toggle("on", !levels);
+  for (const c of document.querySelectorAll(".lv-chip"))
+    c.innerHTML = `${fmtShort(lo)} … ${fmtShort(hi)}${levels ? "" : `<span class="auto">auto</span>`}`;
 }
 
 // Sets one end of the manual levels, pushing the other end so min stays below max.
@@ -730,14 +719,14 @@ function firstView() { return paneEl(shownPanes()[0]).querySelector(".view"); }
 function fitZoom() {
   if (!view) return;
   const vw = firstView();
-  zoom = clamp(Math.floor(Math.min((vw.clientWidth - 2) / view.W, (vw.clientHeight - 2) / view.H)), 1, +$("zoom").max);
+  zoom = clamp(Math.floor(Math.min((vw.clientWidth - 2) / view.W, (vw.clientHeight - 2) / view.H)), ZOOM_MIN, ZOOM_MAX);
   applyZoom();
   scrollAll(0, 0);
 }
 
 // Zooms to `next`, keeping the image point at (mx, my) within view `vw` in place.
 function zoomAt(vw, mx, my, next) {
-  next = clamp(next, +$("zoom").min, +$("zoom").max);
+  next = clamp(next, ZOOM_MIN, ZOOM_MAX);
   if (!view || next === zoom) return;
   const cv = vw.querySelector("canvas"), old = zoom;
   const ix = (vw.scrollLeft + mx - cv.offsetLeft) / old, iy = (vw.scrollTop + my - cv.offsetTop) / old;
@@ -773,6 +762,12 @@ function fmt(x) {
   if (Number.isNaN(x)) return "—";
   if (Number.isInteger(x)) return String(x);
   return Math.abs(x) >= 1e5 || Math.abs(x) < 1e-3 ? x.toExponential(4) : x.toPrecision(6).replace(/\.?0+$/, "");
+}
+
+// Three significant digits, for values shown in the narrow pane headers.
+function fmtShort(x) {
+  if (Number.isNaN(x) || Number.isInteger(x)) return fmt(x);
+  return Math.abs(x) >= 1e5 || Math.abs(x) < 1e-3 ? x.toExponential(2) : String(+x.toPrecision(3));
 }
 
 function inspect(y, x) {
@@ -843,11 +838,16 @@ async function copyText(s) {
 }
 
 // ---- events -----------------------------------------------------------------------
-$("filter").oninput = renderList;
-$("failonly").onchange = () => { prefs.failOnly = $("failonly").checked; save(); renderList(); };
-$("list").onclick = (ev) => { const d = ev.target.closest("div[data-i]"); if (d) select(+d.dataset.i); };
 $("channel").onchange = () => { channelChoice = $("channel").value; draw(); };
-$("outside").onchange = () => { prefs.outside = $("outside").value; save(); draw(); };
+$("outside").onclick = (ev) => {
+  const b = ev.target.closest("button");
+  if (!b) return;
+  prefs.outside = b.dataset.v;
+  syncOutside();
+  save();
+  draw();
+};
+function syncOutside() { for (const b of $("outside").querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === prefs.outside); }
 for (const id of ["lo", "hi"]) {
   $(`lv-${id}-r`).oninput = (ev) => setLevel(id, +ev.target.value);
   $(`lv-${id}`).onchange = (ev) => setLevel(id, parseFloat(ev.target.value));
@@ -855,20 +855,33 @@ for (const id of ["lo", "hi"]) {
 $("lv-auto").onclick = () => { levels = null; draw(); };
 $("th-r").oninput = (ev) => view && setThreshold(thresholdAt(view, +ev.target.value));
 $("th").onchange = (ev) => setThreshold(parseFloat(ev.target.value));
-$("zoom").oninput = () => zoomCenter(+$("zoom").value);
-$("fit").onclick = fitZoom;
-$("layout").onchange = () => { prefs.layout = $("layout").value; maximized = null; layoutGrid(); save(); };
-$("pane-toggles").onclick = (ev) => { const b = ev.target.closest("button"); if (b) setHidden(b.dataset.pane, b.classList.contains("on")); };
-$("reset").onclick = () => {
-  Object.assign(prefs, { order: KEYS.slice(), hidden: [], layout: "grid", fr: {} });
-  maximized = null;
-  $("layout").value = "grid";
-  layoutGrid();
-  save();
-  fitZoom();
-};
-$("copy").onclick = () => view && copyText(`--gtest_filter='${view.e.case}'`);
-$("keys-btn").onclick = () => { $("keys").hidden = false; };
+
+// ---- popups ---------------------------------------------------------------------
+// One popup at a time, opened below the control that owns it and closed by a click elsewhere.
+const POPS = ["lv-pop", "th-pop"];
+let popAnchor = null;
+function closePops() {
+  for (const id of POPS) $(id).hidden = true;
+  popAnchor = null;
+}
+function togglePop(id, anchor) {
+  const open = !$(id).hidden;
+  closePops();
+  if (open) return;
+  const pop = $(id), r = anchor.getBoundingClientRect();
+  pop.hidden = false;
+  pop.style.left = clamp(r.left, 4, window.innerWidth - pop.offsetWidth - 4) + "px";
+  pop.style.top = clamp(r.bottom + 4, 4, window.innerHeight - pop.offsetHeight - 4) + "px";
+  popAnchor = anchor;
+}
+document.addEventListener("mousedown", (ev) => {
+  if (!popAnchor || ev.target.closest(".pop")) return;
+  // The threshold chip is redrawn while its popup is open; its replacement is the anchor then.
+  const anchor = popAnchor.isConnected ? popAnchor : document.querySelector(`[data-act="${popAnchor.dataset.act}"]`);
+  if (anchor?.contains(ev.target)) return;
+  closePops();
+});
+window.addEventListener("resize", closePops);
 $("keys").onclick = (ev) => { if (ev.target === $("keys")) $("keys").hidden = true; };
 
 for (const cv of document.querySelectorAll(".view canvas")) {
@@ -923,12 +936,12 @@ document.addEventListener("keydown", (ev) => {
   const t = ev.target, typing = (t.tagName === "INPUT" && (t.type === "text" || t.type === "number")) || t.tagName === "SELECT";
   if (ev.key === "Escape") {
     if (typing) t.blur();
+    else if (popAnchor) closePops();
     else if (!$("keys").hidden) $("keys").hidden = true;
     else if (maximized) toggleMax(maximized);
     else if (pinned) setPin(false);
     return;
   }
-  if (t === $("filter") && ev.key === "Enter") { select(visible[0]); t.blur(); return; }
   if (typing || ev.ctrlKey || ev.metaKey || ev.altKey) return;
   const pos = visible.indexOf(target);
   switch (ev.key) {
@@ -941,47 +954,47 @@ document.addEventListener("keydown", (ev) => {
     case "f": fitZoom(); break;
     case "+": case "=": zoomCenter(zoomStep(zoom, 1)); break;
     case "-": case "_": zoomCenter(zoomStep(zoom, -1)); break;
-    case "c": $("copy").click(); break;
+    case "c": if (view) copyText(`--gtest_filter='${view.e.case}'`); break;
     case "a": $("lv-auto").click(); break;
-    case "/":
-      if (host) host.postMessage({ type: "focusCases" });
-      else { $("filter").focus(); $("filter").select(); }
-      break;
+    case "/": host.postMessage({ type: "focusCases" }); break;
     case "?": $("keys").hidden = !$("keys").hidden; break;
     default: return;
   }
   ev.preventDefault();
 });
 
+// The editor tab's buttons and the extension's layout picker.
+function runCommand(m) {
+  closePops();
+  if (m.name === "fit") fitZoom();
+  else if (m.name === "keys") $("keys").hidden = !$("keys").hidden;
+  else if (m.name === "reset") resetLayout();
+  else if (m.name === "layout") setLayout(m.value);
+  else if (m.name === "pane" && KEYS.includes(m.key)) setHidden(m.key, !m.shown);
+}
+
 // ---- startup --------------------------------------------------------------------
-$("side").style.width = prefs.side + "px";
 $("info").style.width = prefs.info + "px";
-$("layout").value = prefs.layout;
-$("failonly").checked = prefs.failOnly;
-$("outside").value = prefs.outside;
+syncOutside();
 layoutGrid();
 applyZoom();
-renderList();
-if (!ENTRIES.length) $("title").textContent = "No comparisons in this capture.";
+filterCases();
 
 // The extension answers "ready" with its failing-only setting and the case to show, so a reload
 // keeps the selection; afterwards it sends a message for each pick in its Cases view.
-if (host) {
-  window.addEventListener("message", (ev) => {
-    const m = ev.data;
-    if (m.type === "init" || m.type === "failOnly") { prefs.failOnly = m.failOnly; renderList(); }
-    if (m.type === "init") select(m.index ?? visible[0]);
-    if (m.type === "select") select(m.index);
-    if (m.type === "arrays") {
-      const p = pending.get(m.id);
-      pending.delete(m.id);
-      if (p) m.error ? p.reject(new Error(m.error)) : p.resolve(m);
-    }
-  });
-  host.postMessage({ type: "ready" });
-} else {
-  select(visible[0]);
-}
+window.addEventListener("message", (ev) => {
+  const m = ev.data;
+  if (m.type === "init" || m.type === "failOnly") { failOnly = m.failOnly; filterCases(); }
+  if (m.type === "init") select(m.index ?? visible[0]);
+  if (m.type === "select") select(m.index);
+  if (m.type === "command") runCommand(m);
+  if (m.type === "arrays") {
+    const p = pending.get(m.id);
+    pending.delete(m.id);
+    if (p) m.error ? p.reject(new Error(m.error)) : p.resolve(m);
+  }
+});
+host.postMessage({ type: "ready" });
 </script>
 </body>
 </html>
