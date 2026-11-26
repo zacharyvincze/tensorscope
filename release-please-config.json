@@ -8,7 +8,6 @@
   "bootstrap-sha": "9054caed113409b39ab50cd64540f05ec2bb3d31",
   "packages": {
     ".": {
-      "release-as": "0.1.0",
       "extra-files": [
         "CMakeLists.txt",
         "README.md",
