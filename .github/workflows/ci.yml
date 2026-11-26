@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  capture:
+    name: Capture library
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GoogleTest
+        run: sudo apt-get update && sudo apt-get install -y libgtest-dev
+      - name: Configure
+        run: cmake -S . -B build -DTENSORSCOPE_BUILD_TESTS=ON -DTENSORSCOPE_BUILD_EXAMPLES=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  extension:
+    name: Extension
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      # The build must keep working on Node 18 (see CLAUDE.md).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - run: npm ci
+      # Type-checks, runs the unit tests and builds the .vsix.
+      - run: npm run package

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(tensorscope VERSION 0.1.0 LANGUAGES CXX)
+project(tensorscope VERSION 0.1.0 LANGUAGES CXX)  # x-release-please-version
 
 # Header-only capture library. Consumers link tensorscope::capture.
 add_library(tensorscope_capture INTERFACE)

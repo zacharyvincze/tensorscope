@@ -21,18 +21,22 @@ Header-only C++17, standard library only. It knows nothing about your tensor typ
 
 **1. Add it to the build** behind an option that is off by default:
 
+<!-- x-release-please-start-version -->
+
 ```cmake
 option(MYPROJECT_TENSORSCOPE "Record failing tensor comparisons for tensorscope" OFF)
 if(MYPROJECT_TENSORSCOPE)
     include(FetchContent)
     FetchContent_Declare(tensorscope
         GIT_REPOSITORY git@github.com:zacharyvincze/tensorscope.git
-        GIT_TAG <tag>)  # pin a tag or commit
+        GIT_TAG v0.1.0)
     FetchContent_MakeAvailable(tensorscope)
     target_link_libraries(my_tests PRIVATE tensorscope::capture)
     target_compile_definitions(my_tests PRIVATE MYPROJECT_TENSORSCOPE)
 endif()
 ```
+
+<!-- x-release-please-end -->
 
 **2. Install the GoogleTest listener** in `main`:
 

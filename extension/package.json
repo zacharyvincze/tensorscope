@@ -2,7 +2,7 @@
   "name": "tensorscope",
   "displayName": "Tensorscope",
   "description": "Visual debugger for tensor comparison test captures",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "publisher": "zacharyvincze",
   "license": "MIT",
   "repository": {

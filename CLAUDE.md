@@ -49,3 +49,4 @@ The extension runs on the workspace side so it reads captures on a Remote-SSH ho
 - Header guards use `#ifndef`.
 - Comments are one or two lines saying why; design rationale goes in `spec/` or the README.
 - Markdown is one line per paragraph and per list item.
+- Commit messages follow Conventional Commits (`feat:`, `fix:`, `feat!:` for breaking changes); release-please derives versions and `CHANGELOG.md` from them. `CONTRIBUTING.md` has the details.

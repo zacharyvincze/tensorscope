@@ -4,7 +4,7 @@ Opens tensorscope capture directories in an editor tab.
 
 ## Quick start
 
-1. Install the `.vsix` with **Extensions: Install from VSIX…** (build it with `npm run package`, see [DEVELOPMENT.md](DEVELOPMENT.md)).
+1. Download `tensorscope-<version>.vsix` from the [GitHub Releases](https://github.com/zacharyvincze/tensorscope/releases) and install it with **Extensions: Install from VSIX…**.
 2. Right-click a capture directory in the Explorer and choose **Open Capture…**.
 3. Pick a case in the **Cases** view of the tensorscope sidebar.
 
