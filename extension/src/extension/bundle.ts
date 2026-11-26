@@ -1,8 +1,10 @@
-// Reads capture bundles (spec/format.md) for the page, media/html_viewer.html. The page gets
-// entryMeta() for every comparison up front and entryArrays() for one only when it shows it.
+// Reads capture bundles (spec/format.md) for the webview. The page gets entryMeta() for every
+// comparison up front and entryArrays() for one only when it shows it.
 
 import * as fs from "fs/promises";
 import * as path from "path";
+
+import { Arrays, EntryMeta, ValueArray } from "../shared/protocol";
 
 export const FORMAT = "tensorscope";
 export const VERSION = 1;
@@ -138,7 +140,7 @@ function elements(a: Npy): ArrayLike<number> {
 }
 
 // Element values as the page reads them: float32 where that is exact, float64 otherwise.
-function values(a: Npy): [string, ArrayBuffer] {
+function values(a: Npy): ValueArray {
     const src = elements(a);
     if (EXACT_IN_F32.has(a.descr))
         return ["f4", (src instanceof Float32Array ? src : Float32Array.from(src)).buffer as ArrayBuffer];
@@ -151,7 +153,7 @@ async function load(c: Case, file: string): Promise<Npy> {
 }
 
 // What the page needs to list a comparison; read from the manifest alone.
-export function entryMeta(c: Case, k: number): object {
+export function entryMeta(c: Case, k: number): EntryMeta {
     const e = c.comparisons[k];
     return {
         case: c.name,
@@ -169,7 +171,7 @@ export function entryMeta(c: Case, k: number): object {
 
 // The rest of the entry, sent when the page opens the comparison. ArrayBuffers cross postMessage as
 // binary, so nothing is base64-encoded or compressed on this path. Absent arrays go as null.
-export async function entryArrays(c: Case, k: number) {
+export async function entryArrays(c: Case, k: number): Promise<Arrays> {
     const e = c.comparisons[k];
     const optional = (file?: string) => (file ? load(c, file) : Promise.resolve(null));
     const [ref, act, diff, status] = await Promise.all(
@@ -183,10 +185,4 @@ export async function entryArrays(c: Case, k: number) {
         diff: f32 && ((f32 instanceof Float32Array ? f32 : Float32Array.from(f32)).buffer as ArrayBuffer),
         status: u8 && ((u8 instanceof Uint8Array ? u8 : Uint8Array.from(u8)).buffer as ArrayBuffer),
     };
-}
-
-// The page's initial data, with "</" escaped so it can't close the script tag it sits in.
-export function pageIndex(cases: Case[]): string {
-    const entries = cases.flatMap((c) => c.comparisons.map((_, k) => entryMeta(c, k)));
-    return JSON.stringify(entries).replace(/<\//g, "<\\/");
 }

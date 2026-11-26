@@ -42,13 +42,13 @@
     "viewsWelcome": [
       {
         "view": "tensorscope.cases",
-        "contents": "No capture is open.\n[Open Capture\u2026](command:tensorscope.open)\nYou can also right-click a capture directory or a manifest.json in the Explorer."
+        "contents": "No capture is open.\n[Open Capture…](command:tensorscope.open)\nYou can also right-click a capture directory or a manifest.json in the Explorer."
       }
     ],
     "commands": [
       {
         "command": "tensorscope.open",
-        "title": "Open Capture\u2026",
+        "title": "Open Capture…",
         "category": "Tensorscope",
         "icon": "$(folder-opened)"
       },
@@ -90,7 +90,7 @@
       },
       {
         "command": "tensorscope.layout",
-        "title": "Layout\u2026",
+        "title": "Layout…",
         "category": "Tensorscope",
         "icon": "$(layout)"
       },
@@ -184,19 +184,9 @@
       ],
       "editor/title": [
         {
-          "command": "tensorscope.copyFilter",
-          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture",
-          "group": "navigation@1"
-        },
-        {
-          "command": "tensorscope.fit",
-          "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture",
-          "group": "navigation@2"
-        },
-        {
           "command": "tensorscope.layout",
           "when": "activeWebviewPanelId == 'tensorscope' && tensorscope.hasCapture",
-          "group": "navigation@3"
+          "group": "navigation@1"
         },
         {
           "command": "tensorscope.shortcuts",
@@ -212,15 +202,18 @@
     }
   },
   "scripts": {
-    "copy-assets": "node scripts/copy-assets.js",
-    "build": "npm run copy-assets && tsc -p .",
-    "watch": "npm run copy-assets && tsc -watch -p .",
-    "package": "npm run build && vsce package --no-dependencies"
+    "typecheck": "tsc -p . && tsc -p src/webview && tsc -p test",
+    "build": "npm run typecheck && node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "test": "node scripts/test.mjs",
+    "package": "npm run typecheck && npm test && node scripts/build.mjs --production && vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^18.19.0",
     "@types/vscode": "~1.85.0",
+    "@vscode/codicons": "^0.0.46-24",
     "@vscode/vsce": "^2.32.0",
+    "esbuild": "^0.25.12",
     "typescript": "^5.6.0"
   },
   "overrides": {

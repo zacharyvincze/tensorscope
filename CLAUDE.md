@@ -33,7 +33,14 @@ Consumers fetch the library with `FetchContent` behind an opt-in build option, s
 
 ### Extension
 
-The extension is the only reader. `extension/media/html_viewer.html` is the page it shows in a webview; `extension/src/bundle.ts` reads bundles into the page's entries. The extension sends the page only the metadata up front and each case's arrays on request, so opening cost doesn't grow with capture size. The page only runs inside the extension's webview: case selection lives in the native Cases view (`extension/src/cases.ts`), the editor tab's title bar holds the page's buttons, and the page and extension talk over `postMessage`. The extension runs on the workspace side so it reads captures on a Remote-SSH host. Its build has to work on Node 18, which is why `@vscode/vsce` is pinned to 2.x and `cheerio` is overridden in `package.json`.
+The extension is the only reader. It is TypeScript in three parts: `src/extension/` (Node: commands, the Cases view, one `CapturePanel` per capture tab, the bundle reader), `src/webview/` (the page, built in TypeScript with no framework), and `src/shared/protocol.ts`, which types every message between them. Each part is type-checked against its own environment (`tsconfig.json`, `src/webview/tsconfig.json`), and esbuild bundles both into `out/`. The extension's README maps the files.
+
+- A message or setting changes in `protocol.ts` first; the compiler then points at both sides.
+- The page keeps its state in `App` (`src/webview/app.ts`); components render from it and call its actions. Data logic (`model.ts`, `render.ts`, `format.ts`) stays free of the DOM, so `npm test` covers it.
+- The page takes every colour from VS Code's theme variables, and loads nothing from outside the extension: the codicon font is bundled, and the CSP allows only the extension's own files.
+- Case selection lives in the native Cases view (`src/extension/cases.ts`); the page has no case list. The extension sends the page only metadata up front and each case's arrays on request, so opening cost doesn't grow with capture size.
+
+The extension runs on the workspace side so it reads captures on a Remote-SSH host. Its build has to work on Node 18, which is why `@vscode/vsce` is pinned to 2.x, esbuild to 0.25, and `cheerio` is overridden in `package.json`.
 
 ## Conventions
 

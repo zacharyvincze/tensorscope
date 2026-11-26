@@ -1,0 +1,9 @@
+// Type-checks the webview (browser side): DOM types, and no Node or VS Code API.
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "types": []
+    },
+    "include": [".", "../shared"]
+}

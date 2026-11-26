@@ -1,0 +1,8 @@
+// Type-checks the unit tests, which run in Node against the webview's DOM-free modules.
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "types": ["node"]
+    },
+    "include": ["."]
+}

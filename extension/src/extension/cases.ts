@@ -4,10 +4,12 @@
 import * as vscode from "vscode";
 
 import { Case } from "./bundle";
+import type { CapturePanel } from "./panel";
 
 export interface Entry {
     kind: "entry";
-    index: number;  // position in the page's ENTRIES, i.e. pageData() order
+    /** Position in the entries the page is sent. */
+    index: number;
     case: Case;
     comparison: number;
     leaf: string;
@@ -36,17 +38,12 @@ const key = (e: Entry) => `${e.case.name}#${e.comparison}`;
 const tag = (c: Case, k: number) =>
     c.comparisons[k].label ? ` [${c.comparisons[k].label}]` : c.comparisons.length > 1 ? ` [${k}]` : "";
 
+// The comparisons of one capture directory, as a flat list (the page's order) and as the tree.
 export class Capture {
     entries: Entry[] = [];
     roots: Node[] = [];
     current = -1;            // entry shown in the panel
     private currentKey = ""; // the same entry across reloads, which renumber entries
-    reload: () => Thenable<void> = async () => {};
-    // The page's pane arrangement and hidden panes, as it last reported them.
-    layout: { layout: string; hidden: string[] } = { layout: "grid", hidden: [] };
-    onLayout?: () => void;
-
-    constructor(readonly root: string, readonly label: string, readonly panel: vscode.WebviewPanel) {}
 
     update(cases: Case[]): void {
         this.entries = [];
@@ -82,6 +79,10 @@ export class Capture {
     get failing(): number {
         return this.entries.filter((e) => !e.case.passed).length;
     }
+
+    get currentEntry(): Entry | undefined {
+        return this.entries[this.current];
+    }
 }
 
 const icon = (passed: boolean) => passed
@@ -90,7 +91,7 @@ const icon = (passed: boolean) => passed
 
 export class CasesView implements vscode.TreeDataProvider<Node>, vscode.Disposable {
     readonly view: vscode.TreeView<Node>;
-    private capture?: Capture;
+    private panel?: CapturePanel;
     private readonly changed = new vscode.EventEmitter<Node | undefined>();
     readonly onDidChangeTreeData = this.changed.event;
 
@@ -101,17 +102,22 @@ export class CasesView implements vscode.TreeDataProvider<Node>, vscode.Disposab
         });
         // Selection follows keyboard moves in the tree too, so arrowing through it steps cases.
         this.view.onDidChangeSelection((ev) => {
-            const n = ev.selection[0], c = this.capture;
-            if (n?.kind !== "entry" || !c || n.index === c.current) return;
-            c.select(n.index);
-            c.panel.webview.postMessage({ type: "select", index: n.index });
+            const n = ev.selection[0], p = this.panel;
+            if (n?.kind !== "entry" || !p || n.index === p.capture.current) return;
+            p.capture.select(n.index);
+            p.post({ type: "select", index: n.index });
         });
         this.view.onDidChangeVisibility((ev) => ev.visible && this.revealCurrent());
         this.setContext();
     }
 
-    get active(): Capture | undefined {
-        return this.capture;
+    /** The panel the view follows: the most recently active capture tab. */
+    get active(): CapturePanel | undefined {
+        return this.panel;
+    }
+
+    private get capture(): Capture | undefined {
+        return this.panel?.capture;
     }
 
     get failOnly(): boolean {
@@ -123,29 +129,29 @@ export class CasesView implements vscode.TreeDataProvider<Node>, vscode.Disposab
         this.refresh();
     }
 
-    show(capture: Capture | undefined): void {
-        this.capture = capture;
+    show(panel: CapturePanel | undefined): void {
+        this.panel = panel;
         this.refresh();
         this.revealCurrent();
     }
 
     refresh(): void {
         const c = this.capture;
-        this.view.description = c ? `${c.label} · ${c.failing} of ${c.entries.length} failing` : undefined;
+        this.view.description = c ? `${this.panel!.label} · ${c.failing} of ${c.entries.length} failing` : undefined;
         this.setContext();
         this.changed.fire(undefined);
     }
 
     // The panel moved to another case, e.g. with its own arrow keys.
-    followPanel(capture: Capture, index: number): void {
-        if (index === capture.current) return;
-        capture.select(index);
-        if (capture === this.capture) this.revealCurrent();
+    followPanel(panel: CapturePanel, index: number): void {
+        if (index === panel.capture.current) return;
+        panel.capture.select(index);
+        if (panel === this.panel) this.revealCurrent();
     }
 
     // Only while the view is visible: reveal() would otherwise open the sidebar on every step.
     private revealCurrent(): void {
-        const e = this.capture?.entries[this.capture.current];
+        const e = this.capture?.currentEntry;
         if (!e || !this.view.visible || (this.failOnlyValue && e.case.passed)) return;
         this.view.reveal(e, { select: true, focus: false, expand: true }).then(undefined, () => {});
     }
