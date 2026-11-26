@@ -1,18 +1,14 @@
 // The four image panes: their grid, headers, canvases, linked pan and zoom, and the pixel marker.
 
-import { PANES, Pane } from "../shared/protocol";
+import { PANE_NAMES, PANES, Pane } from "../shared/protocol";
 import type { App } from "./app";
 import { clamp, fill, h, icon, iconButton } from "./dom";
 import { fmtCount, fmtShort } from "./format";
 import type { Painting } from "./render";
 import { INFERNO_GRADIENT } from "./theme";
 
-export const PANE_TITLES: Record<Pane, string> = {
-    ref: "Reference",
-    act: "Actual",
-    diff: "|actual − reference|",
-    status: "Status",
-};
+// The difference pane's title says exactly what it draws.
+const PANE_TITLES: Record<Pane, string> = { ...PANE_NAMES, diff: "|actual − reference|" };
 
 const GAP = 6, MIN_PANE = 80;
 

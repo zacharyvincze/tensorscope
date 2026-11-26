@@ -19,9 +19,8 @@ function cssColor(name: string): RGB {
     probe.fillStyle = "#000";
     probe.fillStyle = getComputedStyle(document.body).getPropertyValue(name).trim() || "#000";
     const c = probe.fillStyle;
-    if (c.startsWith("#")) return [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)) as unknown as RGB;
-    const m = c.match(/[\d.]+/g);
-    return m ? (m.slice(0, 3).map(Number) as unknown as RGB) : [0, 0, 0];
+    const v = c.startsWith("#") ? [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)) : (c.match(/[\d.]+/g) ?? []).map(Number);
+    return v.length >= 3 ? [v[0], v[1], v[2]] : [0, 0, 0];
 }
 
 export function readPalette(): Palette {

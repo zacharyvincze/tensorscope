@@ -37,6 +37,8 @@ export interface Arrays {
 export const PANES = ["ref", "act", "diff", "status"] as const;
 export type Pane = (typeof PANES)[number];
 
+export const PANE_NAMES: Record<Pane, string> = { ref: "Reference", act: "Actual", diff: "Difference", status: "Status" };
+
 export const ARRANGEMENTS = ["grid", "row", "column"] as const;
 export type Arrangement = (typeof ARRANGEMENTS)[number];
 

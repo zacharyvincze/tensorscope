@@ -6,8 +6,8 @@ import * as path from "path";
 
 import { Arrays, EntryMeta, ValueArray } from "../shared/protocol";
 
-export const FORMAT = "tensorscope";
-export const VERSION = 1;
+const FORMAT = "tensorscope";
+const VERSION = 1;
 
 interface ComparisonEntry {
     kind: string;
@@ -40,7 +40,7 @@ const DTYPE_NAMES: Record<string, string> = {
 // Converted to float32 only where that is exact; everything else goes as float64.
 const EXACT_IN_F32 = new Set(["u1", "i1", "u2", "i2", "f2", "f4"]);
 
-export async function readCase(manifest: string): Promise<Case> {
+async function readCase(manifest: string): Promise<Case> {
     const data = JSON.parse(await fs.readFile(manifest, "utf8"));
     if (data.format !== FORMAT) throw new Error(`${manifest}: not a ${FORMAT} manifest`);
     if (!Number.isInteger(data.version) || data.version > VERSION)
@@ -94,7 +94,7 @@ export async function findCases(root: string): Promise<Case[]> {
     return cases.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
-export function parseNpy(buf: Buffer, file = "array"): Npy {
+function parseNpy(buf: Buffer, file = "array"): Npy {
     if (buf.subarray(0, 6).toString("latin1") !== "\x93NUMPY") throw new Error(`${file}: not NPY`);
     const major = buf[6];
     const headerLen = major === 1 ? buf.readUInt16LE(8) : buf.readUInt32LE(8);

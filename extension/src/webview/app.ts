@@ -2,7 +2,7 @@
 // actions; nothing else changes the state.
 
 import {
-    ARRANGEMENTS, Arrangement, Command, DEFAULT_PREFS, EntryMeta, Outside, PANES, Pane, Prefs, sanitizePrefs,
+    ARRANGEMENTS, Arrangement, Command, DEFAULT_PREFS, EntryMeta, Outside, PANE_NAMES, PANES, Pane, Prefs, sanitizePrefs,
 } from "../shared/protocol";
 import { LevelsPopover, ThresholdPopover } from "./controls";
 import { clamp, h } from "./dom";
@@ -408,7 +408,7 @@ export class App {
             return toast("At least one pane must stay visible", "warning");
         if (this.maximized === pane) this.maximized = null;
         this.changeLayout(() => (this.prefs.hidden = shown ? hidden.filter((p) => p !== pane) : [...new Set([...hidden, pane])]));
-        if (!shown) toast(`${pane === "ref" ? "Reference" : pane === "act" ? "Actual" : pane === "diff" ? "Difference" : "Status"} pane hidden · restore it from Layout in the title bar`, "eye-closed");
+        if (!shown) toast(`${PANE_NAMES[pane]} pane hidden · restore it from Layout in the title bar`, "eye-closed");
     }
 
     swapPanes(a: Pane, b: Pane): void {

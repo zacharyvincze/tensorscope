@@ -3,19 +3,12 @@
 import * as path from "path";
 import * as vscode from "vscode";
 
-import { ARRANGEMENTS, Command, PANES, Pane } from "../shared/protocol";
+import { ARRANGEMENTS, Command, PANE_NAMES, PANES } from "../shared/protocol";
 import { CasesView, Entry, Node } from "./cases";
 import { CapturePanel, PanelContext } from "./panel";
 import { PrefsStore } from "./prefs";
 
 const FAIL_ONLY = "tensorscope.failOnly";
-
-const PANE_TITLES: Record<Pane, string> = {
-    ref: "Reference",
-    act: "Actual",
-    diff: "Difference",
-    status: "Status",
-};
 
 export function activate(context: vscode.ExtensionContext): void {
     const cases = new CasesView(context.globalState.get(FAIL_ONLY, false));
@@ -84,7 +77,7 @@ function pickLayout(prefs: PrefsStore, command: (c: Command) => void): void {
             ...PANES.map((pane): LayoutItem => {
                 const shown = !hidden.includes(pane);
                 return {
-                    label: `$(${shown ? "eye" : "eye-closed"}) ${PANE_TITLES[pane]}`,
+                    label: `$(${shown ? "eye" : "eye-closed"}) ${PANE_NAMES[pane]}`,
                     description: shown ? "" : "hidden",
                     command: { name: "showPane", pane, shown: !shown },
                 };
@@ -106,5 +99,3 @@ function pickLayout(prefs: PrefsStore, command: (c: Command) => void): void {
     });
     qp.show();
 }
-
-export function deactivate(): void {}

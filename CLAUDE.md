@@ -27,7 +27,7 @@ The library knows nothing about the code under test. Keep it that way: it holds 
 - **Core header**: `Capture` (the only way to build a comparison), the read-only `Comparison` and `Array` it produces, the case queue, NPY and manifest writing. Standard library only. Everything sits in `inline namespace v1`.
 - **Tests**: `tests/` (GoogleTest, `-DTENSORSCOPE_BUILD_TESTS=ON`) pins down the library's behaviour; a change to the API comes with a test.
 - **GoogleTest header**: the listener that collects comparisons per test case and writes a bundle when a case ends. Separate from the core so the core carries no GTest dependency.
-- **Adapter (lives in the consumer)**: maps the consumer's own tensor descriptors onto canonical arrays, and its comparators feed each element's verdict to the recording's observer. The status mask is the comparator's verdict, never recomputed.
+- **Adapter (lives in the consumer)**: maps the consumer's own tensor descriptors onto canonical arrays, and its comparators feed each element's verdict to the capture's observer. The status mask is the comparator's verdict, never recomputed.
 
 Consumers fetch the library with `FetchContent` behind an opt-in build option, so default and release builds of the consumer never see it. Runtime capture is enabled by `TENSORSCOPE_CAPTURE_DIR`; `TENSORSCOPE_CAPTURE_ALL=1` also writes passing cases.
 

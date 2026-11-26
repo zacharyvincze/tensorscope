@@ -16,6 +16,8 @@ export class Toolbar {
     private readonly zoomText: HTMLButtonElement;
     private positions: HTMLSpanElement[] = [];
     private ranges: HTMLInputElement[] = [];
+    /** The channel buttons, when there are few enough channels for buttons rather than a list. */
+    private channelButtons: Segmented<string> | null = null;
 
     constructor(private readonly app: App) {
         this.prevFailure = iconButton("arrow-up", "Previous failing pixel (Shift+N)", () => app.jumpToFailure(-1));
@@ -65,14 +67,12 @@ export class Toolbar {
 
         const options = [...(v.rgb ? [{ value: "all", text: "RGB", title: "All three channels as colour" }] : []),
                          ...Array.from({ length: v.channels }, (_, c) => ({ value: String(c), text: String(c), title: `Channel ${c}` }))];
-        if (options.length > 1) {
-            const pick = (value: string) => this.app.setChannel(value);
-            const control = options.length <= 5
-                ? (() => { const s = new Segmented("Channel", options, pick); s.value = this.app.channel; return s.el; })()
-                : h("select", { ariaLabel: "Channel", onchange: (ev) => pick((ev.target as HTMLSelectElement).value) },
-                    ...options.map((o) => h("option", { value: o.value, textContent: o.title, selected: o.value === this.app.channel })));
-            fill(this.channel, h("span", { className: "label", textContent: "Channel" }), control);
-        } else fill(this.channel);
+        const pick = (value: string) => this.app.setChannel(value);
+        this.channelButtons = options.length > 1 && options.length <= 5 ? new Segmented("Channel", options, pick) : null;
+        if (options.length > 1)
+            fill(this.channel, h("span", { className: "label", textContent: "Channel" }), this.channelButtons?.el
+                ?? h("select", { ariaLabel: "Channel", onchange: (ev) => pick((ev.target as HTMLSelectElement).value) },
+                    ...options.map((o) => h("option", { value: o.value, textContent: o.title, selected: o.value === this.app.channel }))));
         this.channel.hidden = options.length <= 1;
         this.update();
     }
@@ -91,8 +91,6 @@ export class Toolbar {
         this.prevFailure.disabled = this.nextFailure.disabled = !failing;
         this.zoomText.textContent = `${this.app.zoom}×`;
         this.zoomText.title = `Zoom ${this.app.zoom}× · fit to pane (F)`;
-        // The segmented channel control shows the pick; a select keeps its own.
-        for (const b of this.channel.querySelectorAll<HTMLButtonElement>(".segmented button"))
-            b.ariaPressed = String(b.textContent === (this.app.channel === "all" ? "RGB" : this.app.channel));
+        if (this.channelButtons) this.channelButtons.value = this.app.channel;
     }
 }

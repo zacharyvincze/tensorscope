@@ -6,7 +6,7 @@ import { Prefs, sanitizePrefs } from "../shared/protocol";
 
 const KEY = "tensorscope.prefs";
 
-export interface PrefsChange {
+interface PrefsChange {
     prefs: Prefs;
     /** The panel whose page made the change, which already shows it. */
     source?: unknown;
