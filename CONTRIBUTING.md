@@ -19,14 +19,19 @@ PRs are squash-merged, so the PR title is the commit message. The **PR title** c
 
 `.github/workflows/ci.yml` runs on every PR and push to `main`:
 
-- **Capture library:** builds the tests and examples against the system GoogleTest, runs `ctest`.
+- **Capture library:** builds the tests and examples against the system GoogleTest, runs `ctest`, and runs `doxygen` with warnings as errors.
 - **Extension:** on Node 18, `npm ci` and `npm run package` (type-check, unit tests, `.vsix` build).
+
+## API reference
+
+The headers carry Doxygen block comments (`/** ... */`, with `@param[in]`/`@param[out]` on every parameter). Run `doxygen` from the repo root to build the HTML reference into `build/docs/html`; the usage guide stays in [docs/capture-library.md](docs/capture-library.md).
 
 ## Versions
 
 One version covers the whole repo: the C++ library, the extension and the tag `vX.Y.Z`. release-please keeps these in sync:
 
 - `CMakeLists.txt` (`project(... VERSION ...)`)
+- `Doxyfile` (`PROJECT_NUMBER`)
 - `extension/package.json` and `extension/package-lock.json`
 - the `GIT_TAG` in the FetchContent snippets of `README.md` and `docs/capture-library.md`
 

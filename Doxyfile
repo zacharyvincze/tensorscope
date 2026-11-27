@@ -1,0 +1,32 @@
+# API reference for the capture library. Run `doxygen` from the repo root; output goes to
+# build/docs/html. Only settings that differ from Doxygen's defaults are listed.
+
+PROJECT_NAME           = tensorscope
+PROJECT_BRIEF          = "Capture library for tensor comparison tests"
+# x-release-please-start-version
+PROJECT_NUMBER         = 0.1.0
+# x-release-please-end
+OUTPUT_DIRECTORY       = build/docs
+
+# The usage guide stays in docs/capture-library.md: its GitHub-style anchors don't resolve here.
+INPUT                  = include/tensorscope
+FILE_PATTERNS          = *.hpp
+EXCLUDE_SYMBOLS        = *::detail *::detail::*
+STRIP_FROM_PATH        = include
+
+EXTRACT_ALL            = NO
+HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_CLASSES     = YES
+INLINE_INHERITED_MEMB  = NO
+SORT_MEMBER_DOCS       = NO
+
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = NO
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+
+# Include graphs add little for two headers and would need Graphviz installed.
+HAVE_DOT               = NO

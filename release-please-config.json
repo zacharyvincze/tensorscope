@@ -10,6 +10,7 @@
     ".": {
       "extra-files": [
         "CMakeLists.txt",
+        "Doxyfile",
         "README.md",
         "docs/capture-library.md",
         { "type": "json", "path": "extension/package.json", "jsonpath": "$.version" },

@@ -11,8 +11,11 @@
 
 #include "capture.hpp"
 
-// GoogleTest integration: collects comparisons per test case and writes a bundle when it ends.
-// Kept apart from capture.hpp so the core carries no GTest dependency.
+/**
+ * @file
+ * @brief GoogleTest integration: collects comparisons per test case and writes a bundle when it
+ * ends. Kept apart from capture.hpp so the core carries no GTest dependency.
+ */
 
 namespace tensorscope {
 inline namespace v1 {
@@ -64,9 +67,12 @@ class CaptureListener : public ::testing::EmptyTestEventListener {
 
 }  // namespace detail
 
-// Registers the listener that writes bundles. Call from main after InitGoogleTest; later calls do
-// nothing. No-op unless TENSORSCOPE_CAPTURE_DIR is set; TENSORSCOPE_CAPTURE_ALL=1 also writes
-// passing cases.
+/**
+ * @brief Registers the listener that writes bundles.
+ *
+ * Call from main after InitGoogleTest; later calls do nothing. No-op unless
+ * TENSORSCOPE_CAPTURE_DIR is set; TENSORSCOPE_CAPTURE_ALL=1 also writes passing cases.
+ */
 inline void install() {
     static bool installed = false;
     if (installed) return;
