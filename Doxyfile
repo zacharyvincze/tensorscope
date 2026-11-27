@@ -27,3 +27,6 @@ WARN_NO_PARAMDOC       = NO
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 GENERATE_TREEVIEW      = YES
+
+# Include graphs add little for two headers and would need Graphviz installed.
+HAVE_DOT               = NO
