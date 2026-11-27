@@ -11,14 +11,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install GoogleTest
-        run: sudo apt-get update && sudo apt-get install -y libgtest-dev
+      - name: Install GoogleTest and Doxygen
+        run: sudo apt-get update && sudo apt-get install -y libgtest-dev doxygen
       - name: Configure
         run: cmake -S . -B build -DTENSORSCOPE_BUILD_TESTS=ON -DTENSORSCOPE_BUILD_EXAMPLES=ON
       - name: Build
         run: cmake --build build --parallel
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: API docs
+        # Fails on any Doxygen warning, e.g. a @param that no longer matches its function.
+        run: ( cat Doxyfile; echo "WARN_AS_ERROR=FAIL_ON_WARNINGS" ) | doxygen -
 
   extension:
     name: Extension
