@@ -19,16 +19,26 @@
 #include <utility>
 #include <vector>
 
-// Core of the capture library: Capture builds a Comparison, the queue holds a test case's
-// comparisons, and write_bundle writes them. Standard library only; see spec/format.md.
+/**
+ * @file
+ * @brief Core of the capture library: Capture builds a Comparison, the queue holds a test case's
+ * comparisons, and write_bundle() writes them. Standard library only; see spec/format.md.
+ */
 
+/** @brief Capture library for tensor comparison tests. */
 namespace tensorscope {
 // Versioned so two pinned copies of the library in one binary can't silently mix definitions.
 inline namespace v1 {
 
-// NumPy dtype string for T. Specialize for types that are not arithmetic (e.g. a half class).
+/**
+ * @brief NumPy dtype string for an element type.
+ *
+ * Specialize for types that are not arithmetic (e.g. a half class).
+ * @tparam T Element type; at most 8 bytes.
+ */
 template <typename T>
 struct NpyDescr {
+    /** @return The NumPy dtype string for @p T, e.g. `"<f4"` or `"|u1"`. */
     static std::string get() {
         static_assert(std::is_arithmetic_v<T>, "specialize tensorscope::NpyDescr for this type");
         static_assert(sizeof(T) <= 8, "readers support elements of at most 8 bytes");
@@ -41,37 +51,56 @@ struct NpyDescr {
     }
 };
 
-// One element's verdict, as stored in a comparison's status array.
-enum class Status : std::uint8_t { kNotCompared = 0, kPass = 1, kFail = 2 };
+/** @brief One element's verdict, as stored in a comparison's status array. */
+enum class Status : std::uint8_t {
+    kNotCompared = 0, /**< The comparator did not check this element. */
+    kPass = 1,        /**< The element was within tolerance. */
+    kFail = 2,        /**< The element was out of tolerance. */
+};
 
-// What a comparator calls for each element it checks: its own index for the element,
-// actual - reference as it measured it, and its verdict.
+/**
+ * @brief What a comparator calls for each element it checks.
+ *
+ * Arguments are the comparator's own (storage) index for the element, actual - reference as it
+ * measured it, and its verdict (`true` for pass).
+ */
 using Observer = std::function<void(std::size_t storage, double diff, bool pass)>;
 
 template <typename TRef, typename TAct>
 class Capture;
 
-// A dense row-major array of one element type, as written to one .npy file. Read-only.
+/** @brief A dense row-major array of one element type, as written to one .npy file. Read-only. */
 class Array {
    public:
-    // False for the diff and status of a comparison without verdicts.
+    /** @return False for the diff and status of a comparison without verdicts. */
     bool present() const {
         return !descr_.empty();
     }
+    /** @return The NumPy dtype string of the elements; empty when not present(). */
     const std::string& descr() const {
         return descr_;
     }
+    /** @return The extent of each dimension, outermost first. */
     const std::vector<std::size_t>& shape() const {
         return shape_;
     }
+    /** @return The number of elements: the product of shape(). */
     std::size_t size() const {
         return size_;
     }
+    /** @return The raw element bytes in row-major order. */
     const std::vector<unsigned char>& bytes() const {
         return bytes_;
     }
 
-    // Element i, read as T. Throws if T is not the array's element type or i is out of range.
+    /**
+     * @brief Reads one element.
+     * @tparam T The array's element type.
+     * @param[in] i Dense row-major index.
+     * @return Element @p i, read as @p T.
+     * @throws std::invalid_argument If @p T is not the array's element type.
+     * @throws std::out_of_range If @p i is out of range.
+     */
     template <typename T>
     T get(std::size_t i) const {
         if (NpyDescr<T>::get() != descr_)
@@ -118,44 +147,56 @@ class Array {
     std::vector<unsigned char> bytes_;
 };
 
-// One comparator call as written to a bundle: reference and actual over a canonical shape, plus
-// the comparator's per-element verdicts if it reported any. Read-only; built by a Capture.
+/**
+ * @brief One comparator call as written to a bundle.
+ *
+ * Reference and actual over a canonical shape, plus the comparator's per-element verdicts if it
+ * reported any. Read-only; built by a Capture.
+ */
 class Comparison {
    public:
+    /** @return The comparison kind, as defined in spec/format.md. */
     const std::string& kind() const {
         return kind_;
     }
+    /** @return The optional name set with Capture::set_label(); may be empty. */
     const std::string& label() const {
         return label_;
     }
+    /** @return One axis name per dimension of shape(). */
     const std::vector<std::string>& axes() const {
         return axes_;
     }
+    /** @return The canonical shape, one extent per axis. */
     const std::vector<std::size_t>& shape() const {
         return reference_.shape();
     }
+    /** @return The reference elements in canonical order. */
     const Array& reference() const {
         return reference_;
     }
+    /** @return The actual elements in canonical order. */
     const Array& actual() const {
         return actual_;
     }
-    // float32 actual - reference, NaN where not compared. Absent without verdicts.
+    /** @return float32 actual - reference, NaN where not compared. Absent without verdicts. */
     const Array& diff() const {
         return diff_;
     }
-    // uint8 Status per element. Absent without verdicts.
+    /** @return uint8 Status per element. Absent without verdicts. */
     const Array& status() const {
         return status_;
     }
 
-    // True when the comparator was given the observer, even if it then checked nothing.
+    /** @return True when the comparator was given the observer, even if it then checked nothing. */
     bool has_verdicts() const {
         return status_.present();
     }
+    /** @return The number of elements the comparator checked. */
     std::size_t compared() const {
         return count([](Status s) { return s != Status::kNotCompared; });
     }
+    /** @return The number of elements the comparator marked as failed. */
     std::size_t failed() const {
         return count([](Status s) { return s == Status::kFail; });
     }
@@ -187,22 +228,38 @@ inline std::vector<Comparison>& queue() {
 
 }  // namespace detail
 
-// Hands over the comparisons submitted so far and empties the queue.
+/**
+ * @brief Hands over the comparisons submitted so far and empties the queue.
+ * @return The queued comparisons, in submission order.
+ */
 inline std::vector<Comparison> take_pending() {
     std::vector<Comparison> out;
     out.swap(detail::queue());
     return out;
 }
 
-// Builds one Comparison in two steps: the adapter copies every element with put(), then the
-// comparator reports its verdicts through observer(). submit() queues the result for the test
-// case. A default-constructed Capture is inactive and ignores every call.
+/**
+ * @brief Builds one Comparison in two steps.
+ *
+ * The adapter copies every element with put(), then the comparator reports its verdicts through
+ * observer(). submit() queues the result for the test case. A default-constructed Capture is
+ * inactive and ignores every call.
+ * @tparam TRef Element type of the reference tensor.
+ * @tparam TAct Element type of the actual tensor.
+ */
 template <typename TRef, typename TAct>
 class Capture {
    public:
+    /** @brief Constructs an inactive Capture that ignores every call. */
     Capture() = default;
 
-    // kind and axes follow spec/format.md; shape is the canonical shape, one extent per axis.
+    /**
+     * @brief Constructs an active Capture with zero-filled reference and actual arrays.
+     * @param[in] kind Comparison kind, as defined in spec/format.md.
+     * @param[in] axes Axis names, as defined in spec/format.md.
+     * @param[in] shape The canonical shape, one extent per axis.
+     * @throws std::invalid_argument If @p kind is empty or @p axes and @p shape differ in length.
+     */
     Capture(std::string kind, std::vector<std::string> axes, const std::vector<std::size_t>& shape)
         : state_(std::make_shared<State>()) {
         if (kind.empty()) throw std::invalid_argument("tensorscope: kind is empty");
@@ -217,22 +274,41 @@ class Capture {
         c.actual_ = Array::of<TAct>(shape);
     }
 
-    // Move-only: one Capture owns its comparison until submit().
+    /**
+     * @name Move-only
+     * One Capture owns its comparison until submit().
+     * @{
+     */
     Capture(const Capture&) = delete;
     Capture& operator=(const Capture&) = delete;
     Capture(Capture&&) noexcept = default;
     Capture& operator=(Capture&&) noexcept = default;
+    /** @} */
 
+    /** @return True until submit(); false for a default-constructed Capture. */
     bool active() const {
         return state_ != nullptr;
     }
 
-    // Optional name for this comparison, shown by the viewer when a case has several.
+    /**
+     * @brief Sets an optional name for this comparison, shown by the viewer when a case has
+     * several.
+     * @param[in] label The name to show.
+     */
     void set_label(std::string label) {
         if (state_) state_->cmp.label_ = std::move(label);
     }
 
-    // For data already in canonical order: copies element i, and the comparator reports i too.
+    /**
+     * @brief Copies element @p i, for data already in canonical order.
+     *
+     * The comparator reports the same index @p i. Cannot be mixed with the mapped overload.
+     * @param[in] i Dense row-major index.
+     * @param[in] reference Reference value of the element.
+     * @param[in] actual Actual value of the element.
+     * @throws std::out_of_range If @p i is outside the shape.
+     * @throws std::logic_error If the mapped overload was used on this Capture.
+     */
     void put(std::size_t i, const TRef& reference, const TAct& actual) {
         if (!state_) return;
         use(Layout::kDense);
@@ -240,7 +316,18 @@ class Capture {
         state_->cmp.actual_.put(i, actual);
     }
 
-    // Copies the element the comparator knows as `storage` to canonical position `dense`.
+    /**
+     * @brief Copies the element the comparator knows as @p storage to canonical position
+     * @p dense.
+     *
+     * Cannot be mixed with the dense overload.
+     * @param[in] storage The comparator's own index for the element.
+     * @param[in] dense Dense row-major index in the canonical shape.
+     * @param[in] reference Reference value of the element.
+     * @param[in] actual Actual value of the element.
+     * @throws std::out_of_range If @p dense is outside the shape.
+     * @throws std::logic_error If the dense overload was used on this Capture.
+     */
     void put(std::size_t storage, std::size_t dense, const TRef& reference, const TAct& actual) {
         if (!state_) return;
         use(Layout::kMapped);
@@ -251,9 +338,15 @@ class Capture {
         denseOf[storage] = dense;
     }
 
-    // The callback to hand the comparator. Calling this gives the comparison verdicts: every
-    // element starts as not compared, and the comparator marks the ones it checks. Empty when
-    // inactive. Safe to call from several threads at once for different elements.
+    /**
+     * @brief The callback to hand the comparator.
+     *
+     * Calling this gives the comparison verdicts: every element starts as not compared, and the
+     * comparator marks the ones it checks. The returned observer is safe to call from several
+     * threads at once for different elements; it throws std::out_of_range for a storage index
+     * no put() mapped.
+     * @return The observer, or an empty function when inactive.
+     */
     Observer observer() {
         if (!state_) return {};
         Comparison& c = state_->cmp;
@@ -272,8 +365,11 @@ class Capture {
         };
     }
 
-    // Queues the comparison for the running test case; the Capture is inactive afterwards.
-    // Call it after the comparator returns: the observer ignores calls made later.
+    /**
+     * @brief Queues the comparison for the running test case; the Capture is inactive afterwards.
+     *
+     * Call it after the comparator returns: the observer ignores calls made later.
+     */
     void submit() {
         if (!state_) return;
         detail::queue().push_back(std::move(state_->cmp));
@@ -311,26 +407,30 @@ class Capture {
     std::shared_ptr<State> state_;
 };
 
-// One test case as written to a bundle.
+/** @brief One test case as written to a bundle. */
 struct Case {
-    std::string name;     // e.g. "Filters/BlurTest.Correctness/U8"; each '/' is a directory level
-    bool passed = false;  // the test's own verdict for the whole case
-    std::string failure;  // free text, may be empty
-    std::vector<Comparison> comparisons;
+    /** e.g. "Filters/BlurTest.Correctness/U8"; each '/' is a directory level. */
+    std::string name;
+    bool passed = false;                 /**< The test's own verdict for the whole case. */
+    std::string failure;                 /**< Free text, may be empty. */
+    std::vector<Comparison> comparisons; /**< The case's comparisons, in submission order. */
 };
 
-// TENSORSCOPE_CAPTURE_DIR, or nullptr when capture is off (unset or empty).
+/** @return TENSORSCOPE_CAPTURE_DIR, or nullptr when capture is off (unset or empty). */
 inline const char* capture_dir() {
     const char* dir = std::getenv("TENSORSCOPE_CAPTURE_DIR");
     return dir && *dir ? dir : nullptr;
 }
 
-// True when TENSORSCOPE_CAPTURE_DIR is set; adapters skip all work otherwise.
+/** @return True when TENSORSCOPE_CAPTURE_DIR is set; adapters skip all work otherwise. */
 inline bool enabled() {
     return capture_dir() != nullptr;
 }
 
-// True when TENSORSCOPE_CAPTURE_ALL asks for passing cases too: set, and neither empty nor "0".
+/**
+ * @return True when TENSORSCOPE_CAPTURE_ALL asks for passing cases too: set, and neither empty
+ * nor "0".
+ */
 inline bool capture_all() {
     const char* all = std::getenv("TENSORSCOPE_CAPTURE_ALL");
     return all && *all && std::strcmp(all, "0") != 0;
@@ -419,7 +519,13 @@ inline void clear_bundle(const std::filesystem::path& dir) {
 
 }  // namespace detail
 
-// Where the bundle for case `name` lives under root. Throws if the name could leave root.
+/**
+ * @brief Where the bundle for a case lives.
+ * @param[in] root The capture directory.
+ * @param[in] name The case name; each '/' is a directory level.
+ * @return The bundle directory for @p name under @p root.
+ * @throws std::invalid_argument If @p name is empty, absolute, or could leave @p root.
+ */
 inline std::filesystem::path bundle_dir(const std::filesystem::path& root,
                                         const std::string& name) {
     const std::filesystem::path rel(name);
@@ -430,8 +536,17 @@ inline std::filesystem::path bundle_dir(const std::filesystem::path& root,
     return root / rel;
 }
 
-// Writes the case's bundle to bundle_dir(root, name), replacing any bundle already there.
-// Throws on I/O errors. Readers see the new bundle only once it is complete.
+/**
+ * @brief Writes the case's bundle to bundle_dir(root, c.name), replacing any bundle already
+ * there.
+ *
+ * Readers see the new bundle only once it is complete.
+ * @param[in] root The capture directory.
+ * @param[in] c The case to write.
+ * @throws std::invalid_argument If the case name is unusable; see bundle_dir().
+ * @throws std::runtime_error On I/O errors.
+ * @throws std::filesystem::filesystem_error On filesystem errors.
+ */
 inline void write_bundle(const std::filesystem::path& root, const Case& c) {
     using detail::json_string;
     const std::filesystem::path dir = bundle_dir(root, c.name);
@@ -479,8 +594,14 @@ inline void write_bundle(const std::filesystem::path& root, const Case& c) {
     std::filesystem::rename(tmp, dir / "manifest.json");
 }
 
-// Deletes the bundle for case `name` under root, if there is one, and its directory if that is
-// then empty. Used when a case passes, so an earlier failure's bundle doesn't linger.
+/**
+ * @brief Deletes the bundle for a case, if there is one, and its directory if that is then empty.
+ *
+ * Used when a case passes, so an earlier failure's bundle doesn't linger.
+ * @param[in] root The capture directory.
+ * @param[in] name The case name.
+ * @throws std::invalid_argument If @p name is unusable; see bundle_dir().
+ */
 inline void remove_bundle(const std::filesystem::path& root, const std::string& name) {
     const std::filesystem::path dir = bundle_dir(root, name);
     detail::clear_bundle(dir);
